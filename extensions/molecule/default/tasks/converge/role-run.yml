@@ -1,0 +1,89 @@
+# Execute the collection role "run" against all driver-created instances.
+
+- name: "Molecule | Converge | Store run_apache_httpd_* role parameters in __testing_state"
+  ansible.builtin.include_tasks:
+    file: "../tasks/state_update.yml"
+  vars:
+    __testing_state_update:
+      # set all role configuration variables
+      run_apache_httpd_state: "present"
+      run_apache_httpd_vhosts_config:
+        - name: "example.com"
+          enabled: true
+          content: |
+            <VirtualHost *:80>
+                ServerName example.com
+                DocumentRoot {{ __testing_state['__testing_examplecom_wwwroot'] }}
+
+                <Directory {{ __testing_state['__testing_examplecom_wwwroot'] }}>
+                    Options -Indexes +FollowSymLinks
+                    AllowOverride None
+                    Require all granted
+
+                    # Include snippet for static asset caching
+                    Include snippets/directory/cache-static.conf
+                </Directory>
+            </VirtualHost>
+
+            <IfModule ssl_module>
+            <VirtualHost *:443>
+                ServerName example.com
+                DocumentRoot {{ __testing_state['__testing_examplecom_wwwroot'] }}
+
+                SSLEngine on
+                SSLCertificateFile {{ __testing_state['__testing_examplecom_cert'] }}
+                SSLCertificateKeyFile {{ __testing_state['__testing_examplecom_key'] }}
+
+                # Include snippets for testing
+                Include snippets/vhost/headers-security.conf
+                Include snippets/vhost/headers-hsts.conf
+
+                <Directory {{ __testing_state['__testing_examplecom_wwwroot'] }}>
+                    Options -Indexes +FollowSymLinks
+                    AllowOverride None
+                    Require all granted
+
+                    Include snippets/directory/cache-static.conf
+                </Directory>
+            </VirtualHost>
+            </IfModule>
+        - name: "foo_bar"
+          enabled: true
+          content: |
+            <VirtualHost *:80>
+                ServerName foo_bar
+                DocumentRoot /dev/null
+
+                <Location />
+                    Require all denied
+                </Location>
+            </VirtualHost>
+      run_apache_httpd_snippets_manage: true
+      run_apache_httpd_snippets_delete_unmanaged: true
+      run_apache_httpd_vhosts_delete_unmanaged: true
+      run_apache_httpd_modules_enabled:
+        - ssl
+        - headers
+        - rewrite
+        - socache_shmcb
+
+
+- name: "Molecule | Converge | Set run_apache_httpd_* parameters as facts from __testing_state"
+  ansible.builtin.set_fact:
+    "{{ item['key'] }}": "{{ item['value'] }}"
+  loop: >-
+    {{
+      (__testing_state | default({}, true))
+      | ansible.builtin.dict2items
+      | ansible.builtin.selectattr('key', 'match', '^run_apache_httpd_')
+      | ansible.builtin.list
+    }}
+
+
+- name: "Molecule | Converge | Include the foundata.apache_httpd.run role"
+  ansible.builtin.include_role:
+    name: "foundata.apache_httpd.run"
+  # vars: All run_apache_httpd* variables are set as facts and passed this way to
+  #       the role. This enables persisting the values in __testing_state
+  #       and restoring them in later stages (e.g. verify) without manually
+  #       duplicating data across playbooks.

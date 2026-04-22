@@ -1,0 +1,7 @@
+# Execute the collection role "run" against all driver-created instances (cleanup / absent)
+
+- name: "Molecule | Cleanup | Include the foundata.apache_httpd.run role"
+  ansible.builtin.include_role:
+    name: "foundata.apache_httpd.run"
+  vars:
+    run_apache_httpd_state: "absent"

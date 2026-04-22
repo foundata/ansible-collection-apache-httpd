@@ -1,0 +1,626 @@
+# Check collection role "run" outcomes.
+
+- name: "Molecule | Verify | Initialize the foundata.apache_httpd.run role (without actually running it; get and expose variables)"
+  ansible.builtin.include_role:
+    name: "foundata.apache_httpd.run"
+    tasks_from: "init"
+    public: true
+
+
+## Preparation
+
+- name: "Molecule | Verify | Set run_apache_httpd_* parameters as facts from __testing_state"
+  ansible.builtin.set_fact:
+    "{{ item['key'] }}": "{{ item['value'] }}"
+  loop: >-
+    {{
+      (__testing_state | default({}, true))
+      | ansible.builtin.dict2items
+      | ansible.builtin.selectattr('key', 'match', '^run_apache_httpd_')
+      | ansible.builtin.list
+    }}
+
+
+- name: "Molecule | Verify | Set __testing_* parameters as facts from __testing_state"
+  ansible.builtin.set_fact:
+    "{{ item['key'] }}": "{{ item['value'] }}"
+  loop: >-
+    {{
+      (__testing_state | default({}, true))
+      | ansible.builtin.dict2items
+      | ansible.builtin.selectattr('key', 'match', '^__testing_')
+      | ansible.builtin.list
+    }}
+
+
+## Main configuration file existence
+
+- name: "Molecule | Verify | Check if Apache HTTPD main configuration file exists"
+  ansible.builtin.stat:
+    path: "{{ __run_apache_httpd_config_service_file_path }}"
+  register: __testing_config_file
+
+
+- name: "Molecule | Verify | Assert Apache HTTPD main configuration file exists"
+  ansible.builtin.assert:
+    that:
+      - __testing_config_file['stat']['exists']
+    fail_msg: >-
+      The Apache HTTPD main configuration file '{{ __run_apache_httpd_config_service_file_path }}'
+      does not exist.
+    success_msg: >-
+      The Apache HTTPD main configuration file '{{ __run_apache_httpd_config_service_file_path }}'
+      exists.
+
+
+## Distribution backup file existence and content
+
+- name: "Molecule | Verify | Check if Apache HTTPD distribution backup configuration file exists"
+  ansible.builtin.stat:
+    path: "{{ __run_apache_httpd_config_service_file_distbackup_path }}"
+  register: __testing_distbackup_file
+
+
+- name: "Molecule | Verify | Assert Apache HTTPD distribution backup configuration file exists"
+  ansible.builtin.assert:
+    that:
+      - __testing_distbackup_file['stat']['exists']
+    fail_msg: >-
+      The Apache HTTPD distribution backup configuration file
+      '{{ __run_apache_httpd_config_service_file_distbackup_path }}' does not exist.
+    success_msg: >-
+      The Apache HTTPD distribution backup configuration file
+      '{{ __run_apache_httpd_config_service_file_distbackup_path }}' exists.
+
+
+- name: "Molecule | Verify | Read Apache HTTPD distribution backup configuration file content"
+  ansible.builtin.slurp:
+    src: "{{ __run_apache_httpd_config_service_file_distbackup_path }}"
+  register: __testing_distbackup_content
+
+
+- name: "Molecule | Verify | Assert Apache HTTPD distribution backup contains backup notice comment"
+  ansible.builtin.assert:
+    that:
+      - "__run_apache_httpd_config_service_file_distbackup_comment in (__testing_distbackup_content['content'] | ansible.builtin.b64decode)"
+    fail_msg: >-
+      The Apache HTTPD distribution backup configuration file
+      '{{ __run_apache_httpd_config_service_file_distbackup_path }}'
+      does not contain the expected backup notice comment.
+    success_msg: >-
+      The Apache HTTPD distribution backup configuration file
+      '{{ __run_apache_httpd_config_service_file_distbackup_path }}'
+      contains the expected backup notice comment.
+
+
+## Service state
+
+- name: "Molecule | Verify | Gather service facts"
+  ansible.builtin.service_facts:
+
+
+- name: "Molecule | Verify | Show service facts"
+  ansible.builtin.debug:
+    var: ansible_facts['services']
+    verbosity: 3
+
+
+- name: "Molecule | Verify | Assert Apache HTTPD service is running"
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['services'][__run_apache_httpd_apache_httpd_servicename] is ansible.builtin.defined
+      - ansible_facts['services'][__run_apache_httpd_apache_httpd_servicename]['state'] == 'running'
+    fail_msg: "Apache HTTPD service '{{ __run_apache_httpd_apache_httpd_servicename }}' is not running"
+    success_msg: "Apache HTTPD service '{{ __run_apache_httpd_apache_httpd_servicename }}' is running"
+
+
+## Ports configuration file
+
+- name: "Molecule | Verify | Check if ports configuration file exists"
+  ansible.builtin.stat:
+    path: "{{ __run_apache_httpd_config_service_ports_file_path }}"
+  register: __testing_ports_file
+
+
+- name: "Molecule | Verify | Assert ports configuration file exists"
+  ansible.builtin.assert:
+    that:
+      - __testing_ports_file['stat']['exists']
+    fail_msg: >-
+      The ports configuration file '{{ __run_apache_httpd_config_service_ports_file_path }}'
+      does not exist.
+    success_msg: >-
+      The ports configuration file '{{ __run_apache_httpd_config_service_ports_file_path }}'
+      exists.
+
+
+## Module configuration (symlink type, Debian only)
+
+- name: "Molecule | Verify | Verify module config files in modules-enabled (Debian)"
+  when:
+    - (run_apache_httpd_modules_enabled | ansible.builtin.default([]) | ansible.builtin.length) > 0
+    - (ansible_facts['os_family'] | ansible.builtin.lower) == 'debian'
+  block:
+
+    - name: "Molecule | Verify | Build flat list of expected module conf_files entries"
+      ansible.builtin.set_fact:
+        __testing_module_conf_entries: >-
+          {{
+            run_apache_httpd_modules_enabled
+            | ansible.builtin.default([])
+            | ansible.builtin.select('in', __run_apache_httpd_modules_map_resources.keys() | ansible.builtin.list)
+            | ansible.builtin.map('extract', __run_apache_httpd_modules_map_resources)
+            | ansible.builtin.map(attribute='conf_files')
+            | ansible.builtin.flatten
+            | ansible.builtin.unique(attribute='name')
+            | ansible.builtin.list
+          }}
+
+
+    - name: "Molecule | Verify | Check module config files in modules-enabled"
+      ansible.builtin.stat:
+        path: "{{ __run_apache_httpd_config_service_dropin_modules_enabled_dir_path }}/{{ item['name'] }}"
+      register: __testing_module_enabled_files
+      when:
+        - (__testing_module_conf_entries | ansible.builtin.length) > 0
+      loop: "{{ __testing_module_conf_entries }}"
+      loop_control:
+        label: "{{ item['name'] }}"
+
+
+    - name: "Molecule | Verify | Assert module config files exist in modules-enabled with correct type"
+      ansible.builtin.assert:
+        that:
+          - item['stat']['exists']
+          - >-
+            item['item']['type'] != 'symlink'
+            or item['stat']['islnk']
+        fail_msg: >-
+          Module config '{{ item['item']['name'] }}' does not exist or has
+          wrong type in
+          '{{ __run_apache_httpd_config_service_dropin_modules_enabled_dir_path }}/'.
+        success_msg: >-
+          Module config '{{ item['item']['name'] }}' exists in
+          modules-enabled with correct type.
+      when:
+        - (__testing_module_conf_entries | ansible.builtin.length) > 0
+      loop: "{{ __testing_module_enabled_files['results'] | ansible.builtin.default([]) }}"
+      loop_control:
+        label: "{{ item['item']['name'] | ansible.builtin.default('n/a') }}"
+
+
+## VHost directories
+
+- name: "Molecule | Verify | Check if vhosts-available directory exists"
+  ansible.builtin.stat:
+    path: "{{ __run_apache_httpd_config_service_dropin_vhosts_available_dir_path }}"
+  register: __testing_vhosts_available_dir
+
+
+- name: "Molecule | Verify | Assert vhosts-available directory exists"
+  ansible.builtin.assert:
+    that:
+      - __testing_vhosts_available_dir['stat']['exists']
+      - __testing_vhosts_available_dir['stat']['isdir']
+    fail_msg: >-
+      The vhosts-available directory
+      '{{ __run_apache_httpd_config_service_dropin_vhosts_available_dir_path }}'
+      does not exist or is not a directory.
+    success_msg: >-
+      The vhosts-available directory
+      '{{ __run_apache_httpd_config_service_dropin_vhosts_available_dir_path }}'
+      exists.
+
+
+- name: "Molecule | Verify | Check if vhosts-enabled directory exists"
+  ansible.builtin.stat:
+    path: "{{ __run_apache_httpd_config_service_dropin_vhosts_enabled_dir_path }}"
+  register: __testing_vhosts_enabled_dir
+
+
+- name: "Molecule | Verify | Assert vhosts-enabled directory exists"
+  ansible.builtin.assert:
+    that:
+      - __testing_vhosts_enabled_dir['stat']['exists']
+      - __testing_vhosts_enabled_dir['stat']['isdir']
+    fail_msg: >-
+      The vhosts-enabled directory
+      '{{ __run_apache_httpd_config_service_dropin_vhosts_enabled_dir_path }}'
+      does not exist or is not a directory.
+    success_msg: >-
+      The vhosts-enabled directory
+      '{{ __run_apache_httpd_config_service_dropin_vhosts_enabled_dir_path }}'
+      exists.
+
+
+## VHost config files and symlinks
+
+- name: "Molecule | Verify | Check vhost config files exist in sites-available"
+  ansible.builtin.stat:
+    path: "{{ __run_apache_httpd_config_service_dropin_vhosts_available_dir_path }}/{{ item['name'] }}.conf"
+  register: __testing_vhost_available_files
+  loop: "{{ run_apache_httpd_vhosts_config | ansible.builtin.default([]) }}"
+  loop_control:
+    label: "{{ item['name'] }}.conf"
+
+
+- name: "Molecule | Verify | Assert vhost config files exist in sites-available"
+  ansible.builtin.assert:
+    that:
+      - item['stat']['exists']
+    fail_msg: >-
+      VHost config '{{ item['item']['name'] }}.conf' does not exist in
+      '{{ __run_apache_httpd_config_service_dropin_vhosts_available_dir_path }}/'.
+    success_msg: >-
+      VHost config '{{ item['item']['name'] }}.conf' exists in sites-available.
+  loop: "{{ __testing_vhost_available_files['results'] | ansible.builtin.default([]) }}"
+  loop_control:
+    label: "{{ item['item']['name'] | ansible.builtin.default('n/a') }}.conf"
+
+
+- name: "Molecule | Verify | Check enabled vhost symlinks exist in sites-enabled"
+  ansible.builtin.stat:
+    path: "{{ __run_apache_httpd_config_service_dropin_vhosts_enabled_dir_path }}/{{ item['name'] }}.conf"
+  register: __testing_vhost_enabled_files
+  loop: >-
+    {{
+      (run_apache_httpd_vhosts_config | ansible.builtin.default([]))
+      | ansible.builtin.selectattr('enabled', 'ansible.builtin.defined')
+      | ansible.builtin.selectattr('enabled', 'ansible.builtin.equalto', true)
+      | ansible.builtin.list
+    }}
+  loop_control:
+    label: "{{ item['name'] }}.conf"
+
+
+- name: "Molecule | Verify | Assert enabled vhost symlinks exist in sites-enabled"
+  ansible.builtin.assert:
+    that:
+      - item['stat']['exists']
+      - item['stat']['islnk']
+    fail_msg: >-
+      VHost symlink '{{ item['item']['name'] }}.conf' does not exist or is not
+      a symlink in
+      '{{ __run_apache_httpd_config_service_dropin_vhosts_enabled_dir_path }}/'.
+    success_msg: >-
+      VHost symlink '{{ item['item']['name'] }}.conf' exists in sites-enabled.
+  loop: "{{ __testing_vhost_enabled_files['results'] | ansible.builtin.default([]) }}"
+  loop_control:
+    label: "{{ item['item']['name'] | ansible.builtin.default('n/a') }}.conf"
+
+
+## HTTP connectivity: example.com
+
+- name: "Molecule | Verify | Connect to example.com on HTTP port 80"
+  ansible.builtin.uri:
+    url: "http://localhost/"
+    headers:
+      Host: "example.com"
+    return_content: true
+  register: __testing_http_example_result
+
+
+- name: "Molecule | Verify | Assert example.com HTTP response contains expected content and status"
+  ansible.builtin.assert:
+    that:
+      - __testing_http_example_result['status'] == 200
+      - "'It works!' in __testing_http_example_result['content']"
+    fail_msg: >-
+      The HTTP response from example.com on port 80 did not return HTTP 200
+      or does not contain the expected content.
+      Status: {{ __testing_http_example_result['status'] }}
+    success_msg: >-
+      The HTTP response from example.com on port 80 returned HTTP 200
+      and contains the expected content.
+
+
+## HTTPS connectivity: example.com
+
+- name: "Molecule | Verify | Connect to example.com on HTTPS port 443 (status)"
+  # The command module is used intentionally:
+  # ansible.builtin.uri sends the URL hostname as TLS SNI, which may not
+  # match the server_name. Curl's --resolve flag allows setting the correct
+  # SNI for example.com while connecting to 127.0.0.1.
+  ansible.builtin.command:
+    argv:
+      - "curl"
+      - "--silent"
+      - "--output"
+      - "/dev/null"
+      - "--write-out"
+      - "%{http_code}"
+      - "--max-time"
+      - "5"
+      - "--insecure"
+      - "--resolve"
+      - "example.com:443:127.0.0.1"
+      - "https://example.com/"
+  changed_when:
+    - false
+  failed_when:
+    - __testing_https_example_status is ansible.builtin.failed
+  register: __testing_https_example_status
+
+
+- name: "Molecule | Verify | Connect to example.com on HTTPS port 443 (body)"
+  # The command module is used intentionally:
+  # see the status check task above for the reasoning.
+  ansible.builtin.command:
+    argv:
+      - "curl"
+      - "--silent"
+      - "--max-time"
+      - "5"
+      - "--insecure"
+      - "--resolve"
+      - "example.com:443:127.0.0.1"
+      - "https://example.com/"
+  changed_when:
+    - false
+  failed_when:
+    - __testing_https_example_body is ansible.builtin.failed
+  register: __testing_https_example_body
+
+
+- name: "Molecule | Verify | Assert example.com HTTPS response contains expected content and status"
+  ansible.builtin.assert:
+    that:
+      - __testing_https_example_status['stdout'] == '200'
+      - "'It works!' in __testing_https_example_body['stdout']"
+    fail_msg: >-
+      The HTTPS response from example.com on port 443 did not return HTTP 200
+      or does not contain the expected content.
+      Status: {{ __testing_https_example_status['stdout'] }}
+    success_msg: >-
+      The HTTPS response from example.com on port 443 returned HTTP 200
+      and contains the expected content.
+
+
+## Default catch-all VirtualHost (HTTP 403)
+
+- name: "Molecule | Verify | Connect to non-existing host on HTTP port 80"
+  ansible.builtin.uri:
+    url: "http://localhost/"
+    headers:
+      Host: "does-not-exist.example.com"
+    return_content: false
+    status_code:
+      - 403
+  register: __testing_catchall_http_result
+
+
+- name: "Molecule | Verify | Assert HTTP catch-all returns 403 Forbidden"
+  ansible.builtin.assert:
+    that:
+      - __testing_catchall_http_result['status'] == 403
+    fail_msg: >-
+      The HTTP catch-all VirtualHost did not return the expected 403 Forbidden.
+      Expected HTTP status 403, got '{{ __testing_catchall_http_result['status'] }}'.
+    success_msg: >-
+      The HTTP catch-all VirtualHost correctly returned 403 Forbidden.
+
+
+## Response headers: Apache version information
+
+- name: "Molecule | Verify | Connect to example.com and inspect response headers"
+  ansible.builtin.uri:
+    url: "http://localhost/"
+    headers:
+      Host: "example.com"
+    return_content: false
+  register: __testing_headers_result
+
+
+- name: "Molecule | Verify | Assert response headers do not contain Apache version information"
+  ansible.builtin.assert:
+    that:
+      - __testing_headers_result['server'] is not ansible.builtin.search('Apache/[0-9]')
+    fail_msg: >-
+      The response headers contain Apache version information in the Server header.
+      Server header value: '{{ __testing_headers_result['server'] | default('') }}'
+    success_msg: >-
+      The response headers do not contain Apache version information.
+
+
+## Config snippet files deployed
+
+- name: "Molecule | Verify | Check managed snippet files exist"
+  ansible.builtin.stat:
+    path: "{{ __run_apache_httpd_config_service_dropin_snippets_dir_path }}/{{ item }}"
+  register: __testing_snippet_files
+  loop:
+    - "global/tls-baseline.conf"
+    - "vhost/headers-security.conf"
+    - "vhost/headers-hsts.conf"
+    - "directory/cache-static.conf"
+    - "directory/php-fpm.conf"
+
+
+- name: "Molecule | Verify | Assert all managed snippet files exist"
+  ansible.builtin.assert:
+    that:
+      - item['stat']['exists']
+    fail_msg: >-
+      Snippet file '{{ item['item'] }}' does not exist at
+      '{{ __run_apache_httpd_config_service_dropin_snippets_dir_path }}/{{ item['item'] }}'.
+    success_msg: >-
+      Snippet file '{{ item['item'] }}' exists.
+  loop: "{{ __testing_snippet_files['results'] }}"
+  loop_control:
+    label: "{{ item['item'] }}"
+
+
+## DH parameters file deployed (RFC 7919 ffdhe3072)
+
+- name: "Molecule | Verify | Check DH parameters file exists at configured path"
+  ansible.builtin.stat:
+    path: "{{ __run_apache_httpd_effective_snippet_settings['tls-baseline']['dhparam_path'] }}"
+  register: __testing_dhparam_file
+
+
+- name: "Molecule | Verify | Assert DH parameters file exists and has correct permissions"
+  ansible.builtin.assert:
+    that:
+      - __testing_dhparam_file['stat']['exists']
+      - __testing_dhparam_file['stat']['mode'] == '0644'
+    fail_msg: >-
+      DH parameters file does not exist or has wrong permissions at
+      '{{ __run_apache_httpd_effective_snippet_settings['tls-baseline']['dhparam_path'] }}'.
+      Exists: {{ __testing_dhparam_file['stat']['exists'] | default(false) }},
+      Mode: {{ __testing_dhparam_file['stat']['mode'] | default('N/A') }}
+    success_msg: >-
+      DH parameters file exists with correct permissions (0644) at
+      '{{ __run_apache_httpd_effective_snippet_settings['tls-baseline']['dhparam_path'] }}'.
+
+
+## Apache HTTPD configuration validation
+
+- name: "Molecule | Verify | Run config test to validate full configuration"
+  ansible.builtin.command:
+    argv:
+      - "/bin/sh"
+      - "-c"
+      - "{{ __run_apache_httpd_config_test_cmd }}"
+  changed_when:
+    - false
+  register: __testing_apache_config_test
+
+
+- name: "Molecule | Verify | Assert config test succeeded (configuration is valid)"
+  ansible.builtin.assert:
+    that:
+      - __testing_apache_config_test['rc'] == 0
+    fail_msg: >-
+      Apache HTTPD config test failed with return code {{ __testing_apache_config_test['rc'] }}.
+      stderr: {{ __testing_apache_config_test['stderr'] | default('') }}
+    success_msg: >-
+      Apache HTTPD config test succeeded, configuration is valid.
+
+
+## Baseline directives in main config
+
+- name: "Molecule | Verify | Read main configuration file content"
+  ansible.builtin.slurp:
+    src: "{{ __run_apache_httpd_config_service_file_path }}"
+  register: __testing_main_config_content
+
+
+- name: "Molecule | Verify | Decode main configuration file content"
+  ansible.builtin.set_fact:
+    __testing_main_config: "{{ __testing_main_config_content['content'] | ansible.builtin.b64decode }}"
+
+
+- name: "Molecule | Verify | Assert baseline directives are present in main config"
+  ansible.builtin.assert:
+    that:
+      - __testing_main_config is ansible.builtin.search('ServerTokens ProductOnly')
+      - __testing_main_config is ansible.builtin.search('ServerSignature Off')
+      - __testing_main_config is ansible.builtin.search('TraceEnable Off')
+      - __testing_main_config is ansible.builtin.search('KeepAlive On')
+      - __testing_main_config is ansible.builtin.search('Ansible managed')
+    fail_msg: >-
+      One or more expected baseline directives are missing from the main configuration.
+    success_msg: >-
+      All expected baseline directives (ServerTokens, ServerSignature, TraceEnable,
+      KeepAlive, Ansible managed) are present in the main configuration.
+
+
+## TLS baseline snippet content
+
+- name: "Molecule | Verify | Read TLS baseline snippet file content"
+  ansible.builtin.slurp:
+    src: "{{ __run_apache_httpd_config_service_dropin_snippets_dir_path }}/global/tls-baseline.conf"
+  register: __testing_tls_snippet_content
+
+
+- name: "Molecule | Verify | Decode TLS baseline snippet content"
+  ansible.builtin.set_fact:
+    __testing_tls_snippet: "{{ __testing_tls_snippet_content['content'] | ansible.builtin.b64decode }}"
+
+
+- name: "Molecule | Verify | Assert TLS baseline directives are present in snippet"
+  ansible.builtin.assert:
+    that:
+      - __testing_tls_snippet is ansible.builtin.search('SSLProtocol')
+      - __testing_tls_snippet is ansible.builtin.search('SSLHonorCipherOrder')
+      - __testing_tls_snippet is ansible.builtin.search('SSLOpenSSLConfCmd DHParameters')
+      - __testing_tls_snippet is ansible.builtin.search('SSLCipherSuite ECDHE-ECDSA-AES128-GCM-SHA256:')
+      - __testing_tls_snippet is ansible.builtin.search('SSLOpenSSLConfCmd Curves')
+      - __testing_tls_snippet is ansible.builtin.search('SSLSessionCache')
+    fail_msg: >-
+      One or more TLS baseline directives are missing from the TLS baseline snippet.
+    success_msg: >-
+      All TLS baseline directives (SSLProtocol, SSLHonorCipherOrder, DHParameters,
+      SSLCipherSuite, Curves, SSLSessionCache) are present in the snippet.
+
+
+## Security response headers
+
+- name: "Molecule | Verify | Fetch HTTPS response headers from example.com"
+  ansible.builtin.command:
+    argv:
+      - "curl"
+      - "--head"
+      - "--silent"
+      - "--insecure"
+      - "--resolve"
+      - "example.com:443:127.0.0.1"
+      - "https://example.com/"
+  changed_when:
+    - false
+  register: __testing_https_headers
+
+
+- name: "Molecule | Verify | Assert security response headers are present"
+  ansible.builtin.assert:
+    that:
+      - __testing_https_headers['stdout'] is ansible.builtin.search('(?i)X-Content-Type-Options:\s*nosniff')
+      - __testing_https_headers['stdout'] is ansible.builtin.search('(?i)X-Frame-Options:\s*sameorigin')
+      - __testing_https_headers['stdout'] is ansible.builtin.search('(?i)Referrer-Policy:\s*strict-origin-when-cross-origin')
+    fail_msg: >-
+      One or more expected security headers are missing from the HTTPS response.
+      Response headers: {{ __testing_https_headers['stdout'] }}
+    success_msg: >-
+      All expected security headers (X-Content-Type-Options, X-Frame-Options,
+      Referrer-Policy) are present in the HTTPS response.
+
+
+## HSTS response header
+
+- name: "Molecule | Verify | Assert HSTS header is present in HTTPS response"
+  ansible.builtin.assert:
+    that:
+      - __testing_https_headers['stdout'] is ansible.builtin.search('(?i)Strict-Transport-Security:.*max-age=31536000.*includeSubDomains')
+    fail_msg: >-
+      The HSTS header is missing or has unexpected values in the HTTPS response.
+      Response headers: {{ __testing_https_headers['stdout'] }}
+    success_msg: >-
+      The HSTS header is present with expected values (max-age=31536000; includeSubDomains).
+
+
+## Cache-Control for static assets
+
+- name: "Molecule | Verify | Fetch HTTPS response headers for static asset"
+  ansible.builtin.command:
+    argv:
+      - "curl"
+      - "--head"
+      - "--silent"
+      - "--insecure"
+      - "--resolve"
+      - "example.com:443:127.0.0.1"
+      - "https://example.com/test.css"
+  changed_when:
+    - false
+  register: __testing_static_headers
+
+
+- name: "Molecule | Verify | Assert Cache-Control header is present for static assets"
+  ansible.builtin.assert:
+    that:
+      - __testing_static_headers['stdout'] is ansible.builtin.search('(?i)Cache-Control:.*public.*immutable')
+    fail_msg: >-
+      The Cache-Control header for static assets is missing or has unexpected values.
+      Response headers: {{ __testing_static_headers['stdout'] }}
+    success_msg: >-
+      The Cache-Control header for static assets contains 'public' and 'immutable'.
