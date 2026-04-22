@@ -1,0 +1,76 @@
+# Install: Manage basic resource setup, such as packages or service users.
+
+---
+
+- name: "Setup | Install | Default | Remove unwanted packages (e.g., to prevent conflicts or resolve incompatibilities)"
+  ansible.builtin.package:
+    name: "{{ __run_apache_httpd_packages_removal }}"
+    state: "absent"
+  when:
+    - __run_apache_httpd_packages_removal is ansible.builtin.defined
+    - (__run_apache_httpd_packages_removal | ansible.builtin.length) > 0
+
+
+- name: "Setup | Install | Default | Install or upgrade packages"
+  ansible.builtin.package:
+    name: "{{ __run_apache_httpd_packages_install }}"
+    state: "{{ 'latest' if run_apache_httpd_autoupgrade else 'present' }}"
+  when:
+    - __run_apache_httpd_packages_install is ansible.builtin.defined
+    - (__run_apache_httpd_packages_install | ansible.builtin.length) > 0
+
+
+- name: "Setup | Install | Default | Warn about enabled modules not in platform mapping"
+  ansible.builtin.debug:
+    msg: >-
+      The following modules in 'run_apache_httpd_modules_enabled' are not present in
+      this platform's module resource mapping and will be skipped by this role.
+      Manage them with your own tasks if needed:
+      {{ __run_apache_httpd_unmanaged_modules | ansible.builtin.join(', ') }}
+  vars:
+    __run_apache_httpd_unmanaged_modules: >-
+      {{
+        __run_apache_httpd_effective_modules_enabled
+        | ansible.builtin.default([])
+        | ansible.builtin.reject('in', __run_apache_httpd_modules_map_resources.keys() | ansible.builtin.list)
+        | ansible.builtin.list
+      }}
+  when:
+    - (__run_apache_httpd_unmanaged_modules | ansible.builtin.length) > 0
+
+
+- name: "Setup | Install | Default | Show enabled modules requiring additional packages"
+  ansible.builtin.debug:
+    msg: >-
+      {{
+        __run_apache_httpd_effective_modules_enabled
+        | ansible.builtin.default([])
+        | ansible.builtin.select('in', __run_apache_httpd_modules_map_resources.keys() | list)
+        | ansible.builtin.list
+      }}
+    verbosity: 4
+
+
+- name: "Setup | Install | Default | Install module-specific packages"
+  ansible.builtin.package:
+    name: "{{ __run_apache_httpd_modules_map_resources[item]['packages'] }}"
+    state: "{{ 'latest' if run_apache_httpd_autoupgrade else 'present' }}"
+  when:
+    - (__run_apache_httpd_modules_map_resources[item]['packages'] | ansible.builtin.length) > 0
+  loop: >-
+    {{
+      __run_apache_httpd_effective_modules_enabled
+      | ansible.builtin.default([])
+      | ansible.builtin.select('in', __run_apache_httpd_modules_map_resources.keys() | list)
+      | ansible.builtin.list
+    }}
+
+
+- name: "Setup | Install | Default | Remove unwanted files and directories (e.g., to prevent conflicts or resolve incompatibilities)"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: "absent"
+  when:
+    - __run_apache_httpd_paths_removal is ansible.builtin.defined
+    - (__run_apache_httpd_paths_removal | ansible.builtin.length) > 0
+  loop: "{{ __run_apache_httpd_paths_removal }}"

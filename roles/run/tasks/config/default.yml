@@ -1,0 +1,570 @@
+# Configuration: Manage settings, like adapting or creating config files.
+
+---
+
+- name: "Config | Default | Ensure existence and permissions of directories and files"
+  ansible.builtin.file:
+    path: "{{ item['path'] }}"
+    state: "{{ item['state'] }}"
+    owner: "{{ item['owner'] }}"
+    group: "{{ item['group'] }}"
+    mode: "{{ item['mode'] }}"
+    access_time: "preserve"
+    modification_time: "preserve"
+  loop:
+    - path: "{{ __run_apache_httpd_config_service_file_path }}"
+      state: "touch"
+      owner: "{{ __run_apache_httpd_config_service_file_owner }}"
+      group: "{{ __run_apache_httpd_config_service_file_group }}"
+      mode: "{{ __run_apache_httpd_config_service_file_mode }}"
+
+    - path: "{{ __run_apache_httpd_config_service_dropin_vhosts_available_dir_path }}"
+      state: "directory"
+      owner: "{{ __run_apache_httpd_config_service_dropin_vhosts_available_dir_owner }}"
+      group: "{{ __run_apache_httpd_config_service_dropin_vhosts_available_dir_group }}"
+      mode: "{{ __run_apache_httpd_config_service_dropin_vhosts_available_dir_mode }}"
+
+    - path: "{{ __run_apache_httpd_config_service_dropin_vhosts_enabled_dir_path }}"
+      state: "directory"
+      owner: "{{ __run_apache_httpd_config_service_dropin_vhosts_enabled_dir_owner }}"
+      group: "{{ __run_apache_httpd_config_service_dropin_vhosts_enabled_dir_group }}"
+      mode: "{{ __run_apache_httpd_config_service_dropin_vhosts_enabled_dir_mode }}"
+
+    - path: "{{ __run_apache_httpd_config_service_dropin_modules_available_dir_path }}"
+      state: "directory"
+      owner: "{{ __run_apache_httpd_config_service_dropin_modules_available_dir_owner }}"
+      group: "{{ __run_apache_httpd_config_service_dropin_modules_available_dir_group }}"
+      mode: "{{ __run_apache_httpd_config_service_dropin_modules_available_dir_mode }}"
+
+    - path: "{{ __run_apache_httpd_config_service_dropin_modules_enabled_dir_path }}"
+      state: "directory"
+      owner: "{{ __run_apache_httpd_config_service_dropin_modules_enabled_dir_owner }}"
+      group: "{{ __run_apache_httpd_config_service_dropin_modules_enabled_dir_group }}"
+      mode: "{{ __run_apache_httpd_config_service_dropin_modules_enabled_dir_mode }}"
+
+  loop_control:
+    label: "{{ item['path'] }}"
+  notify:
+    - "run_apache_httpd: validate configuration"
+    - "run_apache_httpd: restart apache_httpd.service"
+
+
+## Backup original main config file if needed
+
+- name: "Config | Default | Check if platform's original config backup already exists"
+  ansible.builtin.stat:
+    path: "{{ __run_apache_httpd_config_service_file_distbackup_path }}"
+  register: __run_apache_httpd_distbackup_stat
+
+
+- name: "Config | Default | Check if current config is already Ansible managed"
+  ansible.builtin.slurp:
+    src: "{{ __run_apache_httpd_config_service_file_path }}"
+  register: __run_apache_httpd_config_current_content
+  when:
+    - not __run_apache_httpd_distbackup_stat['stat']['exists']
+
+
+- name: "Config | Default | Backup the platform's original config"
+  ansible.builtin.copy:
+    src: "{{ __run_apache_httpd_config_service_file_path }}"
+    dest: "{{ __run_apache_httpd_config_service_file_distbackup_path }}"
+    owner: "{{ __run_apache_httpd_config_service_file_distbackup_owner }}"
+    group: "{{ __run_apache_httpd_config_service_file_distbackup_group }}"
+    mode: "{{ __run_apache_httpd_config_service_file_distbackup_mode }}"
+    remote_src: true
+  when:
+    - not __run_apache_httpd_distbackup_stat['stat']['exists']
+    - "'Ansible managed' not in (__run_apache_httpd_config_current_content['content'] | ansible.builtin.b64decode)"
+
+
+- name: "Config | Default | Add backup notice comment to the config backup"
+  ansible.builtin.lineinfile:
+    path: "{{ __run_apache_httpd_config_service_file_distbackup_path }}"
+    line: "{{ __run_apache_httpd_config_service_file_distbackup_comment }}"
+    insertbefore: "BOF"
+  when:
+    - not __run_apache_httpd_distbackup_stat['stat']['exists']
+    - "'Ansible managed' not in (__run_apache_httpd_config_current_content['content'] | ansible.builtin.b64decode)"
+
+
+## Self-signed (snakeoil) certificate for the HTTPS catch-all VirtualHost
+
+- name: "Config | Default | Generate self-signed certificate for HTTPS catch-all VirtualHost"
+  when:
+    - run_apache_httpd_vhosts_default_manage
+    - (__run_apache_httpd_snakeoil_cert_path | ansible.builtin.default('') | ansible.builtin.length) > 0
+    - (__run_apache_httpd_snakeoil_key_path | ansible.builtin.default('') | ansible.builtin.length) > 0
+  block:
+
+    - name: "Config | Default | Check if snakeoil certificate exists"
+      ansible.builtin.stat:
+        path: "{{ __run_apache_httpd_snakeoil_cert_path }}"
+      register: __run_apache_httpd_snakeoil_cert_stat
+
+    - name: "Config | Default | Ensure snakeoil certificate directory exists"
+      ansible.builtin.file:
+        path: "{{ __run_apache_httpd_snakeoil_cert_path | ansible.builtin.dirname }}"
+        state: "directory"
+        owner: "root"
+        group: "root"
+        mode: "u=rwx,g=rx,o=rx"
+      when:
+        - not __run_apache_httpd_snakeoil_cert_stat['stat']['exists']
+
+    - name: "Config | Default | Ensure snakeoil key directory exists"
+      ansible.builtin.file:
+        path: "{{ __run_apache_httpd_snakeoil_key_path | ansible.builtin.dirname }}"
+        state: "directory"
+        owner: "root"
+        group: "root"
+        mode: "u=rwx,g=,o="
+      when:
+        - not __run_apache_httpd_snakeoil_cert_stat['stat']['exists']
+
+    - name: "Config | Default | Generate self-signed snakeoil certificate and key"
+      ansible.builtin.command:
+        argv:
+          - "openssl"
+          - "req"
+          - "-x509"
+          - "-newkey"
+          - "rsa:2048"
+          - "-nodes"
+          - "-keyout"
+          - "{{ __run_apache_httpd_snakeoil_key_path }}"
+          - "-out"
+          - "{{ __run_apache_httpd_snakeoil_cert_path }}"
+          - "-days"
+          - "3650"
+          - "-subj"
+          - "/CN=localhost"
+        creates: "{{ __run_apache_httpd_snakeoil_cert_path }}"
+      when:
+        - not __run_apache_httpd_snakeoil_cert_stat['stat']['exists']
+
+    - name: "Config | Default | Set snakeoil key file permissions"
+      ansible.builtin.file:
+        path: "{{ __run_apache_httpd_snakeoil_key_path }}"
+        owner: "root"
+        group: "root"
+        mode: "u=rw,g=,o="
+      when:
+        - not __run_apache_httpd_snakeoil_cert_stat['stat']['exists']
+
+
+## Main config file
+
+- name: "Config | Default | Create or update the main configuration file"
+  ansible.builtin.template:
+    src: "apache_httpd.conf.j2"
+    dest: "{{ __run_apache_httpd_config_service_file_path }}"
+    owner: "{{ __run_apache_httpd_config_service_file_owner }}"
+    group: "{{ __run_apache_httpd_config_service_file_group }}"
+    mode: "{{ __run_apache_httpd_config_service_file_mode }}"
+  vars:
+    tpl_main_config_block: "{{ run_apache_httpd_main_config_block }}"
+    tpl_main_config_baseline_manage: "{{ run_apache_httpd_main_config_baseline_manage }}"
+    tpl_main_config_baseline_directives: "{{ __run_apache_httpd_effective_main_directives }}"
+    tpl_vhosts_default_manage: "{{ run_apache_httpd_vhosts_default_manage }}"
+    tpl_modules_enabled: "{{ __run_apache_httpd_effective_modules_enabled | ansible.builtin.default([]) }}"
+    tpl_mpm: "{{ run_apache_httpd_mpm }}"
+  notify:
+    - "run_apache_httpd: validate configuration"
+    - "run_apache_httpd: restart apache_httpd.service"
+
+
+## Ports configuration file
+
+- name: "Config | Default | Create or update the ports configuration file"
+  ansible.builtin.template:
+    src: "ports.conf.j2"
+    dest: "{{ __run_apache_httpd_config_service_ports_file_path }}"
+    owner: "{{ __run_apache_httpd_config_service_file_owner }}"
+    group: "{{ __run_apache_httpd_config_service_file_group }}"
+    mode: "{{ __run_apache_httpd_config_service_file_mode }}"
+  vars:
+    tpl_main_config_baseline_manage: "{{ run_apache_httpd_main_config_baseline_manage }}"
+    tpl_modules_enabled: "{{ __run_apache_httpd_effective_modules_enabled | ansible.builtin.default([]) }}"
+  when:
+    - run_apache_httpd_main_config_baseline_manage
+  notify:
+    - "run_apache_httpd: validate configuration"
+    - "run_apache_httpd: reload apache_httpd.service"
+
+
+## Config snippets
+
+- name: "Config | Default | Manage config snippets"
+  when:
+    - run_apache_httpd_snippets_manage
+  block:
+
+    - name: "Config | Default | Ensure existence and permissions of snippet directories"
+      ansible.builtin.file:
+        path: "{{ item['path'] }}"
+        state: "directory"
+        owner: "{{ item['owner'] }}"
+        group: "{{ item['group'] }}"
+        mode: "{{ item['mode'] }}"
+        access_time: "preserve"
+        modification_time: "preserve"
+      loop:
+        - path: "{{ __run_apache_httpd_config_service_dropin_snippets_dir_path }}"
+          owner: "{{ __run_apache_httpd_config_service_dropin_snippets_dir_owner }}"
+          group: "{{ __run_apache_httpd_config_service_dropin_snippets_dir_group }}"
+          mode: "{{ __run_apache_httpd_config_service_dropin_snippets_dir_mode }}"
+
+        - path: "{{ __run_apache_httpd_config_service_dropin_snippets_dir_path }}/global"
+          owner: "{{ __run_apache_httpd_config_service_dropin_snippets_dir_owner }}"
+          group: "{{ __run_apache_httpd_config_service_dropin_snippets_dir_group }}"
+          mode: "{{ __run_apache_httpd_config_service_dropin_snippets_dir_mode }}"
+
+        - path: "{{ __run_apache_httpd_config_service_dropin_snippets_dir_path }}/vhost"
+          owner: "{{ __run_apache_httpd_config_service_dropin_snippets_dir_owner }}"
+          group: "{{ __run_apache_httpd_config_service_dropin_snippets_dir_group }}"
+          mode: "{{ __run_apache_httpd_config_service_dropin_snippets_dir_mode }}"
+
+        - path: "{{ __run_apache_httpd_config_service_dropin_snippets_dir_path }}/directory"
+          owner: "{{ __run_apache_httpd_config_service_dropin_snippets_dir_owner }}"
+          group: "{{ __run_apache_httpd_config_service_dropin_snippets_dir_group }}"
+          mode: "{{ __run_apache_httpd_config_service_dropin_snippets_dir_mode }}"
+      loop_control:
+        label: "{{ item['path'] }}"
+      notify:
+        - "run_apache_httpd: validate configuration"
+        - "run_apache_httpd: restart apache_httpd.service"
+
+
+    - name: "Config | Default | Deploy DH parameters file for TLS baseline snippet"
+      ansible.builtin.copy:
+        src: "dhparam_ffdhe3072.pem"
+        dest: "{{ __run_apache_httpd_effective_snippet_settings['tls-baseline']['dhparam_path'] }}"
+        owner: "root"
+        group: "root"
+        mode: "u=rw,g=r,o=r" # 0644 (DH parameters are public, not secret)
+      notify:
+        - "run_apache_httpd: validate configuration"
+        - "run_apache_httpd: restart apache_httpd.service"
+
+
+    - name: "Config | Default | Create or update config snippet files (to provide common, centrally maintained config blocks to include)"
+      ansible.builtin.template:
+        src: "{{ item }}"
+        dest: >-
+          {{ __run_apache_httpd_config_service_dropin_snippets_dir_path }}/{{
+            item
+            | ansible.builtin.dirname
+            | ansible.builtin.basename
+          }}/{{
+            item
+            | ansible.builtin.basename
+            | ansible.builtin.splitext
+            | ansible.builtin.first
+          }}
+        owner: "{{ __run_apache_httpd_config_service_dropin_file_owner }}"
+        group: "{{ __run_apache_httpd_config_service_dropin_file_group }}"
+        mode: "{{ __run_apache_httpd_config_service_dropin_file_mode }}"
+      vars:
+        tpl_settings: "{{ __run_apache_httpd_effective_snippet_settings }}"
+      with_fileglob:
+        - "templates/snippets/*.conf.j2"
+        - "templates/snippets/global/*.conf.j2"
+        - "templates/snippets/vhost/*.conf.j2"
+        - "templates/snippets/directory/*.conf.j2"
+      notify:
+        - "run_apache_httpd: validate configuration"
+        - "run_apache_httpd: restart apache_httpd.service"
+
+
+- name: "Config | Default | Delete stale / unmanaged config snippets"
+  when:
+    - run_apache_httpd_snippets_manage
+    - run_apache_httpd_snippets_delete_unmanaged
+  block:
+
+    - name: "Config | Default | Build list of expected config snippet filenames"
+      ansible.builtin.set_fact:
+        __run_apache_httpd_expected_snippet_filenames: >-
+          {{
+            (
+                query('ansible.builtin.fileglob', 'templates/snippets/*.conf.j2')
+              + query('ansible.builtin.fileglob', 'templates/snippets/global/*.conf.j2')
+              + query('ansible.builtin.fileglob', 'templates/snippets/vhost/*.conf.j2')
+              + query('ansible.builtin.fileglob', 'templates/snippets/directory/*.conf.j2')
+            )
+            | ansible.builtin.map('ansible.builtin.basename')
+            | ansible.builtin.map('ansible.builtin.regex_replace', '\.j2$', '')
+            | ansible.builtin.list
+          }}
+
+
+    - name: "Config | Default | List existing config snippet files"
+      ansible.builtin.find:
+        paths:
+          - "{{ __run_apache_httpd_config_service_dropin_snippets_dir_path }}"
+        patterns:
+          - "*.conf"
+        file_type: "file"
+        hidden: true
+      register: __run_apache_httpd_snippet_conf_files
+
+
+    - name: "Config | Default | Remove stale, unmanaged snippet files"
+      ansible.builtin.file:
+        path: "{{ item['path'] }}"
+        state: "absent"
+      loop: >-
+        {{
+          __run_apache_httpd_snippet_conf_files['files']
+          | ansible.builtin.rejectattr('path', 'search', '/(' ~ (__run_apache_httpd_expected_snippet_filenames | map('regex_escape') | join('|')) ~ ')$')
+          | ansible.builtin.list
+        }}
+      loop_control:
+        label: "{{ item['path'] }}"
+      when:
+        - (__run_apache_httpd_snippet_conf_files['files'] | length) > 0
+      notify:
+        - "run_apache_httpd: validate configuration"
+        - "run_apache_httpd: reload apache_httpd.service"
+
+
+## VirtualHosts
+
+- name: "Config | Default | Validate vhost (config file) names"
+  ansible.builtin.fail:
+    msg: >-
+      Invalid vhost name "{{ item['name'] }}".
+      Allowed characters are: a-z, A-Z, 0-9, dot (.), underscore (_), and hyphen (-).
+  loop: "{{ run_apache_httpd_vhosts_config | default([]) }}"
+  loop_control:
+    label: "{{ item['name'] }}"
+  when:
+    - item['name'] is not match('^[a-zA-Z0-9._-]+$')
+
+
+- name: "Config | Default | Create or update vhost config files"
+  ansible.builtin.template:
+    src: "vhost.conf.j2"
+    dest: "{{ __run_apache_httpd_config_service_dropin_vhosts_available_dir_path }}/{{ __run_apache_httpd_loop_file_name }}"
+    owner: "{{ __run_apache_httpd_config_service_dropin_vhosts_available_dir_owner }}"
+    group: "{{ __run_apache_httpd_config_service_dropin_vhosts_available_dir_group }}"
+    mode: "{{ __run_apache_httpd_config_service_dropin_file_mode }}"
+  vars:
+    __run_apache_httpd_loop_file_name: "{{ item['name'] }}.conf"
+    tpl_content: "{{ item['content'] }}"
+  loop: "{{ run_apache_httpd_vhosts_config | ansible.builtin.default([]) }}"
+  loop_control:
+    label: "{{ __run_apache_httpd_config_service_dropin_vhosts_available_dir_path }}/{{ __run_apache_httpd_loop_file_name }}"
+  when:
+    - ((run_apache_httpd_vhosts_config | ansible.builtin.default([])) | ansible.builtin.length) > 0
+  notify:
+    - "run_apache_httpd: validate configuration"
+    - "run_apache_httpd: reload apache_httpd.service"
+
+
+- name: "Config | Default | Enable/disable vhost symlinks"
+  ansible.builtin.file:
+    src: "{{ __run_apache_httpd_config_service_dropin_vhosts_available_dir_path }}/{{ __run_apache_httpd_loop_file_name }}"
+    dest: "{{ __run_apache_httpd_config_service_dropin_vhosts_enabled_dir_path }}/{{ __run_apache_httpd_loop_file_name }}"
+    state: "{{ (item.enabled | default(false)) | ternary('link', 'absent') }}"
+    owner: "{{ __run_apache_httpd_config_service_dropin_file_owner }}"
+    group: "{{ __run_apache_httpd_config_service_dropin_file_group }}"
+    mode: "{{ __run_apache_httpd_config_service_dropin_file_mode }}"
+    force: true
+  vars:
+    __run_apache_httpd_loop_file_name: "{{ item['name'] }}.conf"
+  loop: "{{ run_apache_httpd_vhosts_config | ansible.builtin.default([]) }}"
+  loop_control:
+    label: >-
+      {{ __run_apache_httpd_config_service_dropin_vhosts_enabled_dir_path }}/{{ __run_apache_httpd_loop_file_name }}
+      -> {{ __run_apache_httpd_config_service_dropin_vhosts_available_dir_path }}/{{ __run_apache_httpd_loop_file_name }}
+  when:
+    - (run_apache_httpd_vhosts_config | ansible.builtin.default([])) | length > 0
+  notify:
+    - "run_apache_httpd: validate configuration"
+    - "run_apache_httpd: reload apache_httpd.service"
+
+
+- name: "Config | Default | Delete stale / unmanaged vhost configs"
+  when:
+    - run_apache_httpd_vhosts_delete_unmanaged
+  block:
+
+    - name: "Config | Default | Build list of expected vhost config filenames"
+      ansible.builtin.set_fact:
+        __run_apache_httpd_expected_vhost_filenames: >-
+          {{
+            (run_apache_httpd_vhosts_config | default([]))
+            | ansible.builtin.map(attribute='name')
+            | ansible.builtin.map('ansible.builtin.regex_replace', '$', '.conf')
+            | ansible.builtin.list
+          }}
+
+
+    - name: "Config | Default | List existing vhost config files"
+      ansible.builtin.find:
+        paths:
+          - "{{ __run_apache_httpd_config_service_dropin_vhosts_available_dir_path }}"
+          - "{{ __run_apache_httpd_config_service_dropin_vhosts_enabled_dir_path }}"
+        patterns:
+          - "*.conf"
+        file_type: "file"
+        hidden: true
+      register: __run_apache_httpd_vhost_conf_files
+
+
+    - name: "Config | Default | Remove stale, unmanaged vhost config files (not in run_apache_httpd_vhosts_config)"
+      ansible.builtin.file:
+        path: "{{ item['path'] }}"
+        state: "absent"
+      loop: >-
+        {{
+          __run_apache_httpd_vhost_conf_files['files']
+          | ansible.builtin.rejectattr('path', 'search', '/(' ~ (__run_apache_httpd_expected_vhost_filenames | map('regex_escape') | join('|')) ~ ')$')
+          | ansible.builtin.list
+        }}
+      loop_control:
+        label: "{{ item['path'] }}"
+      when:
+        - (__run_apache_httpd_vhost_conf_files['files'] | length) > 0
+      notify:
+        - "run_apache_httpd: validate configuration"
+        - "run_apache_httpd: reload apache_httpd.service"
+
+
+### Modules
+#
+# Module config files are managed according to their platform-specific type:
+# - "symlink": create symlinks from available to enabled (Debian)
+# - "package_managed": the package manages the config; role only installs (RedHat)
+# - "sysconfig": module is managed via APACHE_MODULES sysconfig variable (SUSE)
+
+- name: "Config | Default | Manage module configs"
+  when:
+    - (__run_apache_httpd_effective_modules_enabled | ansible.builtin.default([]) | ansible.builtin.length) > 0
+  block:
+
+    - name: "Config | Default | Build flat list of module conf_files entries for all enabled modules"
+      ansible.builtin.set_fact:
+        __run_apache_httpd_module_conf_entries: >-
+          {{
+            __run_apache_httpd_effective_modules_enabled
+            | ansible.builtin.default([])
+            | ansible.builtin.select('in', __run_apache_httpd_modules_map_resources.keys() | ansible.builtin.list)
+            | ansible.builtin.map('extract', __run_apache_httpd_modules_map_resources)
+            | ansible.builtin.map(attribute='conf_files')
+            | ansible.builtin.flatten
+            | ansible.builtin.unique(attribute='name')
+            | ansible.builtin.list
+          }}
+
+
+    - name: "Config | Default | Create symlinks for package-provided module config files"
+      ansible.builtin.file:
+        src: "{{ item['target'] }}"
+        dest: "{{ __run_apache_httpd_config_service_dropin_modules_enabled_dir_path }}/{{ item['name'] }}"
+        state: "link"
+        force: true
+      when:
+        - item['type'] == 'symlink'
+      loop: "{{ __run_apache_httpd_module_conf_entries }}"
+      loop_control:
+        label: "{{ item['name'] }} ({{ item['type'] }})"
+      notify:
+        - "run_apache_httpd: validate configuration"
+        - "run_apache_httpd: restart apache_httpd.service"
+
+
+    - name: "Config | Default | Update APACHE_MODULES sysconfig variable (sysconfig type)"
+      ansible.builtin.lineinfile:
+        path: "{{ __run_apache_httpd_sysconfig_path }}"
+        regexp: "^APACHE_MODULES="
+        line: >-
+          APACHE_MODULES="{{ __run_apache_httpd_effective_modules_enabled
+            | ansible.builtin.reject('match', '^mpm_')
+            | ansible.builtin.join(' ') }}"
+        state: "present"
+      when:
+        - (__run_apache_httpd_sysconfig_path | ansible.builtin.default('') | ansible.builtin.length) > 0
+      notify:
+        - "run_apache_httpd: validate configuration"
+        - "run_apache_httpd: restart apache_httpd.service"
+
+
+    - name: "Config | Default | Clear sysconfig variables managed by httpd.conf (sysconfig type)"
+      ansible.builtin.lineinfile:
+        path: "{{ __run_apache_httpd_sysconfig_path }}"
+        regexp: "{{ item['regexp'] }}"
+        line: "{{ item['line'] }}"
+        state: "present"
+      when:
+        - (__run_apache_httpd_sysconfig_path | ansible.builtin.default('') | ansible.builtin.length) > 0
+      loop:
+        - regexp: "^APACHE_ACCESS_LOG="
+          line: "APACHE_ACCESS_LOG=\"\""
+        - regexp: "^APACHE_SERVERSIGNATURE="
+          line: "APACHE_SERVERSIGNATURE=\"\""
+        - regexp: "^APACHE_LOGLEVEL="
+          line: "APACHE_LOGLEVEL=\"\""
+        - regexp: "^APACHE_SERVERTOKENS="
+          line: "APACHE_SERVERTOKENS=\"\""
+        - regexp: "^APACHE_TRACEENABLE="
+          line: "APACHE_TRACEENABLE=\"\""
+        - regexp: "^APACHE_USE_CANONICAL_NAME="
+          line: "APACHE_USE_CANONICAL_NAME=\"\""
+      loop_control:
+        label: "{{ item['regexp'] }}"
+      notify:
+        - "run_apache_httpd: validate configuration"
+        - "run_apache_httpd: restart apache_httpd.service"
+
+
+    - name: "Config | Default | Delete stale / unmanaged module configs (symlink type)"
+      when:
+        - run_apache_httpd_modules_disable_unmanaged
+        - (__run_apache_httpd_module_conf_entries | ansible.builtin.selectattr('type', 'equalto', 'symlink') | ansible.builtin.list | ansible.builtin.length) > 0
+      block:
+
+        - name: "Config | Default | Build list of expected module config filenames (symlink type)"
+          ansible.builtin.set_fact:
+            __run_apache_httpd_expected_module_filenames: >-
+              {{
+                __run_apache_httpd_module_conf_entries
+                | ansible.builtin.selectattr('type', 'equalto', 'symlink')
+                | ansible.builtin.map(attribute='name')
+                | ansible.builtin.list
+              }}
+
+
+        - name: "Config | Default | List existing module config files in modules-enabled"
+          ansible.builtin.find:
+            paths:
+              - "{{ __run_apache_httpd_config_service_dropin_modules_enabled_dir_path }}"
+            patterns:
+              - "*.load"
+              - "*.conf"
+            file_type: "any"
+            hidden: true
+          register: __run_apache_httpd_module_conf_files
+
+
+        - name: "Config | Default | Remove stale, unmanaged module configs (not in run_apache_httpd_modules_enabled)"
+          ansible.builtin.file:
+            path: "{{ item['path'] }}"
+            state: "absent"
+          when:
+            - (__run_apache_httpd_module_conf_files['files'] | ansible.builtin.length) > 0
+          loop: >-
+            {{
+              __run_apache_httpd_module_conf_files['files']
+              | ansible.builtin.rejectattr('path', 'search', '/(' ~ (__run_apache_httpd_expected_module_filenames
+                                                                     | ansible.builtin.map('ansible.builtin.regex_escape')
+                                                                     | ansible.builtin.join('|')) ~ ')$')
+              | ansible.builtin.list
+            }}
+          loop_control:
+            label: "{{ item['path'] }}"
+          notify:
+            - "run_apache_httpd: validate configuration"
+            - "run_apache_httpd: restart apache_httpd.service"

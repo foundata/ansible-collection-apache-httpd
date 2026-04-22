@@ -1,0 +1,338 @@
+# Internal role variables specific to: Debian (os_family or distribution)
+#
+# Only values specific to the platform and its functionality should be included
+# here. Variables in this file override those defined in vars/main.yml.
+
+---
+
+# List of package names to be installed when run_apache_httpd_state is
+# set to "present".
+__run_apache_httpd_packages_install:
+  - "apache2"
+  - "apache2-utils"
+
+# Remove distribution config files that conflict with the role's managed config.
+# - security.conf: overrides ServerTokens/ServerSignature from our baseline
+# - other-vhosts-access-log.conf: adds duplicate CustomLog for VHosts
+__run_apache_httpd_paths_removal:
+  - "/etc/apache2/conf-enabled/security.conf"
+  - "/etc/apache2/conf-enabled/other-vhosts-access-log.conf"
+
+
+# Main configuration file path. Debian uses "apache2.conf" instead of
+# "httpd.conf".
+__run_apache_httpd_config_service_file_path: "/etc/apache2/apache2.conf"
+
+# Config test command.
+__run_apache_httpd_config_test_cmd: "apache2ctl configtest"
+
+# Service user and group.
+__run_apache_httpd_service_user: "www-data"
+__run_apache_httpd_service_group: "www-data"
+
+
+# Snippet settings overrides.
+__run_apache_httpd_snippet_settings_overwrite:
+  tls-baseline:
+    ssl_session_cache: "shmcb:${APACHE_RUN_DIR}/ssl_scache(10485760)"
+
+
+# Essential modules: These are the modules Debian enables by default after a
+# fresh Apache2 installation. They are required for basic Apache HTTPD operation
+# and are always included in the effective modules list regardless of user
+# configuration. The cleanup of unmanaged modules will never remove these.
+# The MPM module is added automatically based on run_apache_httpd_mpm and does
+# not appear here.
+__run_apache_httpd_modules_essential:
+  - "access_compat"
+  - "alias"
+  - "auth_basic"
+  - "authn_core"
+  - "authn_file"
+  - "authz_core"
+  - "authz_host"
+  - "authz_user"
+  - "autoindex"
+  - "deflate"
+  - "dir"
+  - "env"
+  - "filter"
+  - "mime"
+  - "negotiation"
+  - "reqtimeout"
+  - "setenvif"
+  - "status"
+
+
+# Module mapping: Debian uses symlinks from mods-available/ to mods-enabled/.
+# Each module can have a .load file (LoadModule directive) and optionally a
+# .conf file (module configuration). Both ship with the apache2 package for
+# built-in modules. External modules require separate package installation.
+#
+# conf_files entries:
+#   type: "symlink" — create symlink from mods-available/ to mods-enabled/
+#   target: relative path from mods-enabled/ to the file in mods-available/
+__run_apache_httpd_modules_map_resources:
+  # --- Core / built-in modules (ship with apache2 package) ---
+  access_compat:
+    packages: []
+    conf_files:
+      - name: "access_compat.load"
+        type: "symlink"
+        target: "../mods-available/access_compat.load"
+  alias:
+    packages: []
+    conf_files:
+      - name: "alias.load"
+        type: "symlink"
+        target: "../mods-available/alias.load"
+      - name: "alias.conf"
+        type: "symlink"
+        target: "../mods-available/alias.conf"
+  auth_basic:
+    packages: []
+    conf_files:
+      - name: "auth_basic.load"
+        type: "symlink"
+        target: "../mods-available/auth_basic.load"
+  authn_core:
+    packages: []
+    conf_files:
+      - name: "authn_core.load"
+        type: "symlink"
+        target: "../mods-available/authn_core.load"
+  authn_file:
+    packages: []
+    conf_files:
+      - name: "authn_file.load"
+        type: "symlink"
+        target: "../mods-available/authn_file.load"
+  authz_core:
+    packages: []
+    conf_files:
+      - name: "authz_core.load"
+        type: "symlink"
+        target: "../mods-available/authz_core.load"
+  authz_host:
+    packages: []
+    conf_files:
+      - name: "authz_host.load"
+        type: "symlink"
+        target: "../mods-available/authz_host.load"
+  authz_user:
+    packages: []
+    conf_files:
+      - name: "authz_user.load"
+        type: "symlink"
+        target: "../mods-available/authz_user.load"
+  autoindex:
+    packages: []
+    conf_files:
+      - name: "autoindex.load"
+        type: "symlink"
+        target: "../mods-available/autoindex.load"
+      - name: "autoindex.conf"
+        type: "symlink"
+        target: "../mods-available/autoindex.conf"
+  brotli:
+    packages: []
+    conf_files:
+      - name: "brotli.load"
+        type: "symlink"
+        target: "../mods-available/brotli.load"
+  deflate:
+    packages: []
+    conf_files:
+      - name: "deflate.load"
+        type: "symlink"
+        target: "../mods-available/deflate.load"
+      - name: "deflate.conf"
+        type: "symlink"
+        target: "../mods-available/deflate.conf"
+  dir:
+    packages: []
+    conf_files:
+      - name: "dir.load"
+        type: "symlink"
+        target: "../mods-available/dir.load"
+      - name: "dir.conf"
+        type: "symlink"
+        target: "../mods-available/dir.conf"
+  env:
+    packages: []
+    conf_files:
+      - name: "env.load"
+        type: "symlink"
+        target: "../mods-available/env.load"
+  expires:
+    packages: []
+    conf_files:
+      - name: "expires.load"
+        type: "symlink"
+        target: "../mods-available/expires.load"
+  filter:
+    packages: []
+    conf_files:
+      - name: "filter.load"
+        type: "symlink"
+        target: "../mods-available/filter.load"
+  headers:
+    packages: []
+    conf_files:
+      - name: "headers.load"
+        type: "symlink"
+        target: "../mods-available/headers.load"
+  http2:
+    packages: []
+    conf_files:
+      - name: "http2.load"
+        type: "symlink"
+        target: "../mods-available/http2.load"
+      - name: "http2.conf"
+        type: "symlink"
+        target: "../mods-available/http2.conf"
+  mime:
+    packages: []
+    conf_files:
+      - name: "mime.load"
+        type: "symlink"
+        target: "../mods-available/mime.load"
+      - name: "mime.conf"
+        type: "symlink"
+        target: "../mods-available/mime.conf"
+  negotiation:
+    packages: []
+    conf_files:
+      - name: "negotiation.load"
+        type: "symlink"
+        target: "../mods-available/negotiation.load"
+      - name: "negotiation.conf"
+        type: "symlink"
+        target: "../mods-available/negotiation.conf"
+  proxy:
+    packages: []
+    conf_files:
+      - name: "proxy.load"
+        type: "symlink"
+        target: "../mods-available/proxy.load"
+      - name: "proxy.conf"
+        type: "symlink"
+        target: "../mods-available/proxy.conf"
+  proxy_fcgi:
+    packages: []
+    conf_files:
+      - name: "proxy_fcgi.load"
+        type: "symlink"
+        target: "../mods-available/proxy_fcgi.load"
+  proxy_http:
+    packages: []
+    conf_files:
+      - name: "proxy_http.load"
+        type: "symlink"
+        target: "../mods-available/proxy_http.load"
+  proxy_http2:
+    packages: []
+    conf_files:
+      - name: "proxy_http2.load"
+        type: "symlink"
+        target: "../mods-available/proxy_http2.load"
+  proxy_wstunnel:
+    packages: []
+    conf_files:
+      - name: "proxy_wstunnel.load"
+        type: "symlink"
+        target: "../mods-available/proxy_wstunnel.load"
+  reqtimeout:
+    packages: []
+    conf_files:
+      - name: "reqtimeout.load"
+        type: "symlink"
+        target: "../mods-available/reqtimeout.load"
+      - name: "reqtimeout.conf"
+        type: "symlink"
+        target: "../mods-available/reqtimeout.conf"
+  rewrite:
+    packages: []
+    conf_files:
+      - name: "rewrite.load"
+        type: "symlink"
+        target: "../mods-available/rewrite.load"
+  setenvif:
+    packages: []
+    conf_files:
+      - name: "setenvif.load"
+        type: "symlink"
+        target: "../mods-available/setenvif.load"
+      - name: "setenvif.conf"
+        type: "symlink"
+        target: "../mods-available/setenvif.conf"
+  socache_shmcb:
+    packages: []
+    conf_files:
+      - name: "socache_shmcb.load"
+        type: "symlink"
+        target: "../mods-available/socache_shmcb.load"
+  ssl:
+    packages: []
+    conf_files:
+      - name: "ssl.load"
+        type: "symlink"
+        target: "../mods-available/ssl.load"
+      - name: "ssl.conf"
+        type: "symlink"
+        target: "../mods-available/ssl.conf"
+  status:
+    packages: []
+    conf_files:
+      - name: "status.load"
+        type: "symlink"
+        target: "../mods-available/status.load"
+      - name: "status.conf"
+        type: "symlink"
+        target: "../mods-available/status.conf"
+  # --- MPM modules (only one can be active at a time) ---
+  mpm_event:
+    packages: []
+    conf_files:
+      - name: "mpm_event.load"
+        type: "symlink"
+        target: "../mods-available/mpm_event.load"
+      - name: "mpm_event.conf"
+        type: "symlink"
+        target: "../mods-available/mpm_event.conf"
+  mpm_worker:
+    packages: []
+    conf_files:
+      - name: "mpm_worker.load"
+        type: "symlink"
+        target: "../mods-available/mpm_worker.load"
+      - name: "mpm_worker.conf"
+        type: "symlink"
+        target: "../mods-available/mpm_worker.conf"
+  mpm_prefork:
+    packages: []
+    conf_files:
+      - name: "mpm_prefork.load"
+        type: "symlink"
+        target: "../mods-available/mpm_prefork.load"
+      - name: "mpm_prefork.conf"
+        type: "symlink"
+        target: "../mods-available/mpm_prefork.conf"
+  # --- External modules (require separate packages) ---
+  fcgid:
+    packages:
+      - "libapache2-mod-fcgid"
+    conf_files:
+      - name: "fcgid.load"
+        type: "symlink"
+        target: "../mods-available/fcgid.load"
+      - name: "fcgid.conf"
+        type: "symlink"
+        target: "../mods-available/fcgid.conf"
+  evasive:
+    packages:
+      - "libapache2-mod-evasive"
+    conf_files:
+      - name: "evasive.load"
+        type: "symlink"
+        target: "../mods-available/evasive.load"

@@ -1,0 +1,310 @@
+# Internal role variables and values that must NOT be overridden by the user.
+#
+# Variables defined here usually override earlier definitions due to the high
+# precedence of this file. Each variable should have a concise comment above
+# it, describing its purpose and how it fits into the role's functionality.
+
+---
+
+# List of facts used by the role (gathered on a best-effort basis if needed).
+#
+# To identify which subset a fact belongs to during development, you can use
+# the following snippet:
+#
+# - ansible.builtin.setup:
+#     gather_subset:
+#       - '!min'
+#       - '<subset_name, see parameter doc for details>'
+__run_apache_httpd_used_facts:
+  # from subset "distribution"
+  - "distribution"
+  - "distribution_major_version"
+  - "distribution_version"
+  - "os_family"
+
+
+# List of platforms this role supports and was designed for.
+#
+# A warning will be issued if the list contains values and the role is executed
+# on an unknown (not listed) platform, but execution will continue. Example:
+#
+# - name: "Fedora" # A ansible_facts value ('distribution' or 'os_family')
+#   versions: # A ansible_facts value ('distribution_major_version' or
+#     - "all" # 'distribution_version') or "all"
+# - name: "Ubuntu"
+#   versions:
+#     - "22.04"
+#     - "24.04"
+# - name: "RedHat"
+#   versions:
+#     - "all"
+# - name: "Debian"
+#   versions:
+#     - "all"
+__run_apache_httpd_supported_platforms:
+  - name: "Debian"
+    versions:
+      - "12"
+      - "13"
+  - name: "Fedora"
+    versions:
+      - "43"
+      - "42"
+  - name: "openSUSE Leap"
+    versions:
+      - "16.0"
+  - name: "RedHat" # includes AlmaLinux, Rocky and CentOS Stream
+    versions:
+      - "9"
+      - "10"
+  - name: "Ubuntu"
+    versions:
+      - "24.04"
+      - "22.04"
+
+
+# List of package names to be installed when run_apache_httpd_state is
+# set to "present".
+__run_apache_httpd_packages_install:
+  - "apache2"
+
+
+# List of package names to be uninstalled when run_apache_httpd_state is
+# set to "absent". This variable is useful when __run_apache_httpd_packages_install
+# contains packages that are required for the managed software to function but
+# should not be removed during uninstallation, as doing so could break other
+# software. This is usually the case if there are common dependencies like
+# "curl" or "openssl" which typically should remain installed even after
+# uninstalling the software managed by this role.
+__run_apache_httpd_packages_uninstall: "{{ __run_apache_httpd_packages_install }}"
+
+
+# List of package names to be removed unconditionally before installation
+# (e.g., to prevent conflicts or resolve incompatibilities).
+__run_apache_httpd_packages_removal: []
+
+
+# List of paths of files and directories to be removed unconditionally after
+# installation. This is useful for removing default configuration resources
+# that would otherwise create confusion or conflict with custom configurations
+# managed by this role.
+__run_apache_httpd_paths_removal: []
+
+
+# ServerRoot directory. Apache resolves relative paths in Include directives,
+# LoadModule statements, and similar from this directory. Must match the
+# platform's config root so that relative "Include snippets/..." paths work.
+__run_apache_httpd_server_root: "/etc/apache2"
+
+
+# Configuration file paths, ownership, and permissions. These variables define
+# the different locations of configuration files, include directories, and
+# Ansible-managed files, ensuring consistent file handling across distributions.
+__run_apache_httpd_config_service_file_path: "/etc/apache2/apache2.conf"
+__run_apache_httpd_config_service_file_owner: "root"
+__run_apache_httpd_config_service_file_group: "root"
+__run_apache_httpd_config_service_file_mode: "u=rw,g=r,o=r" # 0644
+
+# Backup of the original distribution config (before role takes over).
+__run_apache_httpd_config_service_file_distbackup_path: "{{ __run_apache_httpd_config_service_file_path }}.ansible_role_distbackup"
+__run_apache_httpd_config_service_file_distbackup_owner: "root"
+__run_apache_httpd_config_service_file_distbackup_group: "root"
+__run_apache_httpd_config_service_file_distbackup_mode: "u=rw,g=r,o=r" # 0644
+
+__run_apache_httpd_config_service_file_distbackup_comment: >-
+  # This is a backup of the platform's original Apache config before Ansible
+  took over management of the file
+
+__run_apache_httpd_config_service_dropin_dir_path: "/etc/apache2/conf-enabled"
+__run_apache_httpd_config_service_dropin_dir_owner: "{{ __run_apache_httpd_config_service_file_owner }}"
+__run_apache_httpd_config_service_dropin_dir_group: "{{ __run_apache_httpd_config_service_file_group }}"
+__run_apache_httpd_config_service_dropin_dir_mode: "u=rwx,g=rx,o=rx" # 0755
+
+__run_apache_httpd_config_service_dropin_file_owner: "{{ __run_apache_httpd_config_service_file_owner }}"
+__run_apache_httpd_config_service_dropin_file_group: "{{ __run_apache_httpd_config_service_file_group }}"
+__run_apache_httpd_config_service_dropin_file_mode: "{{ __run_apache_httpd_config_service_file_mode }}"
+
+# VirtualHost / sites directories. The role uses a Debian-style
+# available/enabled pattern on all platforms. On non-Debian platforms these
+# directories are created by the role and an IncludeOptional is added to the
+# managed main config file.
+__run_apache_httpd_config_service_dropin_vhosts_available_dir_path: "/etc/apache2/sites-available"
+__run_apache_httpd_config_service_dropin_vhosts_available_dir_owner: "{{ __run_apache_httpd_config_service_file_owner }}"
+__run_apache_httpd_config_service_dropin_vhosts_available_dir_group: "{{ __run_apache_httpd_config_service_file_group }}"
+__run_apache_httpd_config_service_dropin_vhosts_available_dir_mode: "{{ __run_apache_httpd_config_service_dropin_dir_mode }}"
+
+__run_apache_httpd_config_service_dropin_vhosts_enabled_dir_path: "/etc/apache2/sites-enabled"
+__run_apache_httpd_config_service_dropin_vhosts_enabled_dir_owner: "{{ __run_apache_httpd_config_service_file_owner }}"
+__run_apache_httpd_config_service_dropin_vhosts_enabled_dir_group: "{{ __run_apache_httpd_config_service_file_group }}"
+__run_apache_httpd_config_service_dropin_vhosts_enabled_dir_mode: "{{ __run_apache_httpd_config_service_dropin_dir_mode }}"
+
+__run_apache_httpd_config_service_dropin_modules_available_dir_path: "/etc/apache2/mods-available"
+__run_apache_httpd_config_service_dropin_modules_available_dir_owner: "{{ __run_apache_httpd_config_service_file_owner }}"
+__run_apache_httpd_config_service_dropin_modules_available_dir_group: "{{ __run_apache_httpd_config_service_file_group }}"
+__run_apache_httpd_config_service_dropin_modules_available_dir_mode: "{{ __run_apache_httpd_config_service_dropin_dir_mode }}"
+
+__run_apache_httpd_config_service_dropin_modules_enabled_dir_path: "/etc/apache2/mods-enabled"
+__run_apache_httpd_config_service_dropin_modules_enabled_dir_owner: "{{ __run_apache_httpd_config_service_file_owner }}"
+__run_apache_httpd_config_service_dropin_modules_enabled_dir_group: "{{ __run_apache_httpd_config_service_file_group }}"
+__run_apache_httpd_config_service_dropin_modules_enabled_dir_mode: "{{ __run_apache_httpd_config_service_dropin_dir_mode }}"
+
+__run_apache_httpd_config_service_dropin_snippets_dir_path: "/etc/apache2/snippets"
+__run_apache_httpd_config_service_dropin_snippets_dir_owner: "{{ __run_apache_httpd_config_service_file_owner }}"
+__run_apache_httpd_config_service_dropin_snippets_dir_group: "{{ __run_apache_httpd_config_service_file_group }}"
+__run_apache_httpd_config_service_dropin_snippets_dir_mode: "{{ __run_apache_httpd_config_service_dropin_dir_mode }}"
+
+__run_apache_httpd_log_dir_path: "/var/log/apache2"
+__run_apache_httpd_log_access_path: "{{ __run_apache_httpd_log_dir_path }}/access.log"
+__run_apache_httpd_log_error_path: "{{ __run_apache_httpd_log_dir_path }}/error.log"
+
+
+# Ports configuration file (rendered by the role when baseline is managed).
+__run_apache_httpd_config_service_ports_file_path: "/etc/apache2/ports.conf"
+
+
+# Mapping of Apache module short names to their platform-specific resources.
+#
+# Module naming convention:
+# Use the short name as accepted by `a2enmod` or derived from the .so filename
+# by stripping the `mod_` prefix and `.so` suffix. Examples:
+#   mod_ssl.so           -> "ssl"
+#   mod_proxy_fcgi.so    -> "proxy_fcgi"
+#   mod_http2.so         -> "http2"
+#   mod_brotli.so        -> "brotli"
+#   mod_headers.so       -> "headers"
+#
+# Structure per module entry:
+#   packages:    List of distribution packages to install. Empty list means
+#                the module ships with the base Apache package.
+#   conf_files:  List of config file definitions for enabling the module.
+#     - name:    Filename (in the platform's module config directory).
+#       type:    "symlink" = create symlink from available to enabled dir.
+#                "load_module" = generate a LoadModule config file.
+#                "package_managed" = package installs/manages the config file;
+#                  the role only ensures the package is installed.
+#       target:  For symlink: source path. For load_module: path to .so file.
+#
+# This dict is empty here and populated by platform-specific vars files
+# (vars/debian.yml, vars/redhat.yml, vars/suse.yml).
+__run_apache_httpd_modules_map_resources: {}
+
+
+# List of module short names that are always implicitly enabled regardless of
+# user configuration. These represent the platform's baseline set of modules
+# required for basic Apache HTTPD operation. Populated by platform-specific vars
+# files. The selected MPM module (from run_apache_httpd_mpm) is added
+# automatically and does not need to appear here.
+__run_apache_httpd_modules_essential: []
+
+
+###############################################################################
+# Snippet settings (three-tier merge: defaults < platform overwrite < user)
+###############################################################################
+
+# Internal defaults for snippet template variables. Platform-specific overrides
+# are defined in __run_apache_httpd_snippet_settings_overwrite. User overrides
+# in run_apache_httpd_snippet_settings take highest priority.
+__run_apache_httpd_snippet_settings_defaults:
+  hsts:
+    max_age: 31536000 # 1 year in seconds
+    include_subdomains: true
+    preload: false
+  php-fpm:
+    type: "socket"
+    socket: "/run/php/php-fpm.sock"
+    tcp_host: "127.0.0.1"
+    tcp_port: 9000
+  tls-baseline:
+    dhparam_path: "/etc/ssl/certs/dhparam_ffdhe3072.pem"
+    ssl_protocols: "all -SSLv2 -SSLv3 -TLSv1 -TLSv1.1"
+    # Mozilla Intermediate cipher list (Guideline v6.0)
+    # https://ssl-config.mozilla.org/
+    ssl_ciphers: >-
+      ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:DHE-RSA-CHACHA20-POLY1305
+    ssl_honor_cipher_order: "off"
+    # ECDHE curves for key exchange, following Mozilla Guideline v6.0.
+    # X25519MLKEM768 is a post-quantum hybrid (ML-KEM/Kyber + X25519) key
+    # exchange that requires OpenSSL >= 3.5 and nginx >= 1.27. Platforms
+    # with older OpenSSL override this to the classical-only curve list
+    # via version-specific vars files (e.g. vars/debian_12.yml).
+    ecdh_curves: "X25519MLKEM768:X25519:prime256v1:secp384r1"
+    ssl_session_timeout: "1d"
+    ssl_session_cache: "shmcb:/run/httpd/ssl_scache(10485760)"
+    ocsp_stapling: true
+    resolvers:
+      # Quad9, https://quad9.net/
+      - "9.9.9.9"
+      - "149.112.112.112"
+      # Google DNS, https://developers.google.com/speed/public-dns
+      # - "8.8.8.8"
+      # - "8.8.4.4"
+      # Cloudflare DNS,  https://one.one.one.one/
+      # - "1.1.1.1"
+      # - "1.0.0.1"
+    resolver_timeout: "3s"
+
+# Platform-specific overrides for snippet settings. These are merged on top of
+# __run_apache_httpd_snippet_settings_defaults before user settings are applied.
+# Populated by platform-specific vars files.
+__run_apache_httpd_snippet_settings_overwrite: {}
+
+
+###############################################################################
+# Baseline directives (three-tier merge: defaults < platform overwrite < user)
+###############################################################################
+
+# Default baseline directives for the main config. These are security-oriented
+# sane defaults that the role injects when run_apache_httpd_main_config_baseline_manage
+# is true. Stored as a dictionary so platform-specific overrides and user settings
+# can selectively replace individual directives via combine(recursive=true).
+# The template renders them via the render_directives() macro from
+# _apache_httpd_macros.j2 (booleans become On/Off, lists produce multiple lines).
+__run_apache_httpd_main_directives_defaults:
+  ServerTokens: "ProductOnly"
+  ServerSignature: false
+  TraceEnable: false
+  Timeout: 300
+  KeepAlive: true
+  MaxKeepAliveRequests: 100
+  KeepAliveTimeout: 5
+  HostnameLookups: false
+  LogLevel: "warn"
+  AddDefaultCharset: "UTF-8"
+  EnableSendfile: true
+
+# Platform-specific overrides for the main baseline directives. These are merged
+# on top of __run_apache_httpd_main_directives_defaults via combine(recursive=true).
+# Populated by platform-specific vars files.
+__run_apache_httpd_main_directives_overwrite: {}
+
+# Service user and group (the user/group Apache runs as).
+__run_apache_httpd_service_user: "www-data"
+__run_apache_httpd_service_group: "www-data"
+
+# Platform default self-signed ("snakeoil") certificate and key paths.
+# Used by the catch-all HTTPS VirtualHost to complete the TLS handshake before
+# returning 403 Forbidden. When both are non-empty and the files exist, the
+# HTTPS catch-all VHost is rendered. Set to empty strings on platforms that
+# don't ship a default snakeoil certificate (e.g. SUSE).
+__run_apache_httpd_snakeoil_cert_path: "/etc/ssl/certs/ssl-cert-snakeoil.pem"
+__run_apache_httpd_snakeoil_key_path: "/etc/ssl/private/ssl-cert-snakeoil.key"
+
+# Path to the platform's sysconfig file for Apache HTTPD. Used on SUSE to
+# manage the APACHE_MODULES variable. Empty string on platforms that don't use
+# sysconfig-based module management.
+__run_apache_httpd_sysconfig_path: ""
+
+# Daemon service name and paths of executables for management and validation.
+__run_apache_httpd_apache_httpd_servicename: "apache2.service"
+__run_apache_httpd_config_test_cmd: "apachectl configtest"
+
+# Paths of other executables and resources.
+__run_apache_httpd_sha1sum_exec_path: "/usr/bin/sha1sum"
+__run_apache_httpd_touch_exec_path: "/usr/bin/touch"
+__run_apache_httpd_chmod_exec_path: "/usr/bin/chmod"
+__run_apache_httpd_chown_exec_path: "/usr/bin/chown"
+
+
+### Override defaults of dependencies used by this role (if any).
+
+# nothing right now

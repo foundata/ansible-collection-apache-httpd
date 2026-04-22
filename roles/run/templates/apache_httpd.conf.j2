@@ -1,0 +1,163 @@
+{#-
+  Render an Apache HTTPD main configuration file.
+
+  Unlike NGINX (which separates events{} and http{} blocks), Apache uses a
+  flat global context for all server-wide directives.
+-#}
+{%- from '_apache_httpd_macros.j2' import render_directives -%}
+{%- set main_config_block = tpl_main_config_block | ansible.builtin.default('') -%}
+{%- set main_config_baseline_manage = tpl_main_config_baseline_manage | ansible.builtin.default(true) -%}
+{%- set main_config_baseline_directives = tpl_main_config_baseline_directives | ansible.builtin.default({}, true) -%}
+{%- set vhosts_default_manage = tpl_vhosts_default_manage | ansible.builtin.default(true) -%}
+{%- set modules_enabled = tpl_modules_enabled | ansible.builtin.default([]) -%}
+{%- set mpm = tpl_mpm | ansible.builtin.default('event') -%}
+# {{ ansible_managed }}
+
+###############################################################################
+# Global configuration
+###############################################################################
+
+# Base directory for resolving relative paths in Include, LoadModule, etc.
+ServerRoot "{{ __run_apache_httpd_server_root }}"
+
+
+###############################################################################
+# Module loading
+###############################################################################
+
+# Include module configuration files. Loaded early so that <IfModule> checks
+# in subsequent sections (ports, baseline, VHosts) resolve correctly.
+IncludeOptional {{ __run_apache_httpd_config_service_dropin_modules_enabled_dir_path }}/*.load
+IncludeOptional {{ __run_apache_httpd_config_service_dropin_modules_enabled_dir_path }}/*.conf
+
+{% if main_config_baseline_manage == true %}
+
+###############################################################################
+# Baseline configuration
+###############################################################################
+
+{{ render_directives(main_config_baseline_directives) }}
+
+# Service user and group
+User {{ __run_apache_httpd_service_user }}
+Group {{ __run_apache_httpd_service_group }}
+
+# Error log
+ErrorLog {{ __run_apache_httpd_log_error_path }}
+
+# Include port configuration
+Include {{ __run_apache_httpd_config_service_ports_file_path }}
+
+{% endif %}
+{% if (main_config_block | ansible.builtin.length) > 0 %}
+# User-supplied directives
+{{ main_config_block | ansible.builtin.trim }}
+
+{% endif %}
+
+###############################################################################
+# Default MIME type mappings and charsets
+###############################################################################
+
+{% if main_config_baseline_manage == true %}
+<IfModule mime_module>
+    TypesConfig /etc/mime.types
+</IfModule>
+
+{% endif %}
+
+###############################################################################
+# Logging
+###############################################################################
+
+{% if main_config_baseline_manage == true %}
+<IfModule log_config_module>
+    <IfModule logio_module>
+        LogFormat "%h %l %u %t \"%r\" %>s %O \"%{Referer}i\" \"%{User-Agent}i\"" combined
+        LogFormat "%h %l %u %t \"%r\" %>s %O" common
+    </IfModule>
+    <IfModule !logio_module>
+        LogFormat "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\"" combined
+        LogFormat "%h %l %u %t \"%r\" %>s %b" common
+    </IfModule>
+    CustomLog {{ __run_apache_httpd_log_access_path }} combined
+</IfModule>
+
+{% endif %}
+
+###############################################################################
+# Directory defaults
+###############################################################################
+
+{% if main_config_baseline_manage == true %}
+<Directory />
+    Options FollowSymLinks
+    AllowOverride None
+    Require all denied
+</Directory>
+
+AccessFileName .htaccess
+<FilesMatch "^\.ht">
+    Require all denied
+</FilesMatch>
+
+{% endif %}
+
+{% if vhosts_default_manage == true %}
+
+###############################################################################
+# Fallback / catch-all VirtualHost
+###############################################################################
+
+# Restrictive catch-all VirtualHost that returns 403 Forbidden for all requests
+# not matching any other VirtualHost. This prevents unintended content exposure
+# when requests arrive for unknown hostnames or manipulated SNI values.
+# These must be defined BEFORE any user VirtualHosts so they become Apache's
+# default VirtualHost for each port (Apache selects the first matching
+# VirtualHost when no ServerName matches).
+
+<VirtualHost *:80>
+    ServerName localhost
+    DocumentRoot /dev/null
+
+    <Location />
+        Require all denied
+    </Location>
+
+    ErrorLog {{ __run_apache_httpd_log_error_path }}
+    CustomLog /dev/null common
+</VirtualHost>
+
+{% if 'ssl' in modules_enabled and (__run_apache_httpd_snakeoil_cert_path | length) > 0 and (__run_apache_httpd_snakeoil_key_path | length) > 0 %}
+<IfModule ssl_module>
+<VirtualHost *:443>
+    ServerName localhost
+    DocumentRoot /dev/null
+
+    SSLEngine on
+
+    # Self-signed / snake-oil certificate. The handshake completes but the
+    # response is 403 Forbidden regardless.
+    SSLCertificateFile {{ __run_apache_httpd_snakeoil_cert_path }}
+    SSLCertificateKeyFile {{ __run_apache_httpd_snakeoil_key_path }}
+
+    <Location />
+        Require all denied
+    </Location>
+
+    ErrorLog {{ __run_apache_httpd_log_error_path }}
+    CustomLog /dev/null common
+</VirtualHost>
+</IfModule>
+{% endif %}
+{% endif %}
+
+###############################################################################
+# Drop-in configuration
+###############################################################################
+
+# Include general drop-in config fragments
+IncludeOptional {{ __run_apache_httpd_config_service_dropin_dir_path }}/*.conf
+
+# Include enabled VirtualHost definitions (available/enabled pattern)
+IncludeOptional {{ __run_apache_httpd_config_service_dropin_vhosts_enabled_dir_path }}/*.conf

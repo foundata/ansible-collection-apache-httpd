@@ -1,0 +1,293 @@
+# Internal role variables specific to: Suse (os_family)
+#
+# Only values specific to the platform and its functionality should be included
+# here. Variables in this file override those defined in vars/main.yml.
+
+---
+
+# List of package names to be installed when run_apache_httpd_state is
+# set to "present".
+__run_apache_httpd_packages_install:
+  - "apache2"
+  - "apache2-utils"
+
+
+# Configuration file paths. SUSE uses /etc/apache2/ with httpd.conf as the
+# main config file name.
+__run_apache_httpd_config_service_file_path: "/etc/apache2/httpd.conf"
+__run_apache_httpd_config_service_file_distbackup_path: "/etc/apache2/httpd.conf.ansible_role_distbackup"
+__run_apache_httpd_config_service_dropin_dir_path: "/etc/apache2/conf.d"
+
+# SUSE uses "vhosts" terminology and different directory names.
+__run_apache_httpd_config_service_dropin_vhosts_available_dir_path: "/etc/apache2/vhosts-available"
+__run_apache_httpd_config_service_dropin_vhosts_enabled_dir_path: "/etc/apache2/vhosts.d"
+
+# SUSE does not use a Debian-style mods-available/enabled split. Module loading
+# is controlled via APACHE_MODULES in /etc/sysconfig/apache2 and the
+# auto-generated loadmodule.conf. The role creates these directories to
+# maintain a consistent interface.
+__run_apache_httpd_config_service_dropin_modules_available_dir_path: "/etc/apache2/mods-available"
+__run_apache_httpd_config_service_dropin_modules_enabled_dir_path: "/etc/apache2/mods-enabled"
+
+__run_apache_httpd_config_service_dropin_snippets_dir_path: "/etc/apache2/snippets"
+__run_apache_httpd_config_service_ports_file_path: "/etc/apache2/listen.conf"
+
+# Path to the SUSE sysconfig file for Apache. Used for module management and
+# MPM selection on SUSE.
+__run_apache_httpd_sysconfig_path: "/etc/sysconfig/apache2"
+
+
+# Config test command. SUSE's apachectl is provided by apache2-utils and wraps
+# start_apache2, which handles sysconfig preprocessing (module loading, etc.).
+__run_apache_httpd_config_test_cmd: "apachectl configtest"
+
+# Service user and group. SUSE uses "wwwrun" / "www".
+__run_apache_httpd_service_user: "wwwrun"
+__run_apache_httpd_service_group: "www"
+
+# Modules that are always included regardless of user configuration. These
+# match the SUSE default APACHE_MODULES set and are required for basic Apache
+# operation (e.g. log_config for CustomLog in sysconfig.d/global.conf).
+__run_apache_httpd_modules_essential:
+  - "access_compat"
+  - "alias"
+  - "auth_basic"
+  - "authn_core"
+  - "authn_file"
+  - "authz_core"
+  - "authz_groupfile"
+  - "authz_host"
+  - "authz_user"
+  - "autoindex"
+  - "cgi"
+  - "dir"
+  - "env"
+  - "expires"
+  - "include"
+  - "log_config"
+  - "mime"
+  - "negotiation"
+  - "reqtimeout"
+  - "setenvif"
+  - "status"
+  - "userdir"
+
+# Snakeoil certificate. SUSE does not ship a default snakeoil cert but the role
+# generates one if missing. Paths follow SUSE's /etc/apache2/ssl.*/ convention.
+__run_apache_httpd_snakeoil_cert_path: "/etc/apache2/ssl.crt/snakeoil.pem"
+__run_apache_httpd_snakeoil_key_path: "/etc/apache2/ssl.key/snakeoil.key"
+
+# Log directory.
+__run_apache_httpd_log_dir_path: "/var/log/apache2"
+__run_apache_httpd_log_access_path: "/var/log/apache2/access_log"
+__run_apache_httpd_log_error_path: "/var/log/apache2/error_log"
+
+
+# Snippet settings overrides. SUSE uses /etc/apache2/ssl.crt/ for certs and
+# /var/lib/apache2/ for runtime state.
+__run_apache_httpd_snippet_settings_overwrite:
+  tls-baseline:
+    dhparam_path: "/etc/apache2/ssl.prm/dhparam_ffdhe3072.pem"
+    ssl_session_cache: "shmcb:/var/lib/apache2/ssl_scache(10485760)"
+
+
+# Module mapping: SUSE manages modules via the APACHE_MODULES variable in
+# /etc/sysconfig/apache2. The a2enmod helper edits this variable. Module .so
+# files live in /usr/lib64/apache2-<mpm>/ where <mpm> is the active MPM.
+#
+# conf_files entries:
+#   type: "sysconfig" — module is managed via the APACHE_MODULES sysconfig
+#     variable. The "name" field holds the module's sysconfig name.
+__run_apache_httpd_modules_map_resources:
+  # --- Built-in modules (ship with apache2 package) ---
+  access_compat:
+    packages: []
+    conf_files:
+      - name: "access_compat"
+        type: "sysconfig"
+  alias:
+    packages: []
+    conf_files:
+      - name: "alias"
+        type: "sysconfig"
+  auth_basic:
+    packages: []
+    conf_files:
+      - name: "auth_basic"
+        type: "sysconfig"
+  authn_core:
+    packages: []
+    conf_files:
+      - name: "authn_core"
+        type: "sysconfig"
+  authn_file:
+    packages: []
+    conf_files:
+      - name: "authn_file"
+        type: "sysconfig"
+  authz_core:
+    packages: []
+    conf_files:
+      - name: "authz_core"
+        type: "sysconfig"
+  authz_host:
+    packages: []
+    conf_files:
+      - name: "authz_host"
+        type: "sysconfig"
+  authz_groupfile:
+    packages: []
+    conf_files:
+      - name: "authz_groupfile"
+        type: "sysconfig"
+  authz_user:
+    packages: []
+    conf_files:
+      - name: "authz_user"
+        type: "sysconfig"
+  autoindex:
+    packages: []
+    conf_files:
+      - name: "autoindex"
+        type: "sysconfig"
+  cgi:
+    packages: []
+    conf_files:
+      - name: "cgi"
+        type: "sysconfig"
+  deflate:
+    packages: []
+    conf_files:
+      - name: "deflate"
+        type: "sysconfig"
+  dir:
+    packages: []
+    conf_files:
+      - name: "dir"
+        type: "sysconfig"
+  env:
+    packages: []
+    conf_files:
+      - name: "env"
+        type: "sysconfig"
+  expires:
+    packages: []
+    conf_files:
+      - name: "expires"
+        type: "sysconfig"
+  filter:
+    packages: []
+    conf_files:
+      - name: "filter"
+        type: "sysconfig"
+  headers:
+    packages: []
+    conf_files:
+      - name: "headers"
+        type: "sysconfig"
+  include:
+    packages: []
+    conf_files:
+      - name: "include"
+        type: "sysconfig"
+  log_config:
+    packages: []
+    conf_files:
+      - name: "log_config"
+        type: "sysconfig"
+  mime:
+    packages: []
+    conf_files:
+      - name: "mime"
+        type: "sysconfig"
+  negotiation:
+    packages: []
+    conf_files:
+      - name: "negotiation"
+        type: "sysconfig"
+  proxy:
+    packages: []
+    conf_files:
+      - name: "proxy"
+        type: "sysconfig"
+  proxy_fcgi:
+    packages: []
+    conf_files:
+      - name: "proxy_fcgi"
+        type: "sysconfig"
+  proxy_http:
+    packages: []
+    conf_files:
+      - name: "proxy_http"
+        type: "sysconfig"
+  proxy_wstunnel:
+    packages: []
+    conf_files:
+      - name: "proxy_wstunnel"
+        type: "sysconfig"
+  reqtimeout:
+    packages: []
+    conf_files:
+      - name: "reqtimeout"
+        type: "sysconfig"
+  rewrite:
+    packages: []
+    conf_files:
+      - name: "rewrite"
+        type: "sysconfig"
+  setenvif:
+    packages: []
+    conf_files:
+      - name: "setenvif"
+        type: "sysconfig"
+  socache_shmcb:
+    packages: []
+    conf_files:
+      - name: "socache_shmcb"
+        type: "sysconfig"
+  ssl:
+    packages: []
+    conf_files:
+      - name: "ssl"
+        type: "sysconfig"
+  status:
+    packages: []
+    conf_files:
+      - name: "status"
+        type: "sysconfig"
+  userdir:
+    packages: []
+    conf_files:
+      - name: "userdir"
+        type: "sysconfig"
+  # --- External modules (require separate packages) ---
+  fcgid:
+    packages:
+      - "apache2-mod_fcgid"
+    conf_files:
+      - name: "fcgid"
+        type: "sysconfig"
+  evasive:
+    packages:
+      - "apache2-mod_evasive"
+    conf_files:
+      - name: "evasive"
+        type: "sysconfig"
+  php:
+    packages:
+      - "apache2-mod_php8"
+    conf_files:
+      - name: "php"
+        type: "sysconfig"
+  perl:
+    packages:
+      - "apache2-mod_perl"
+    conf_files:
+      - name: "perl"
+        type: "sysconfig"
+  wsgi:
+    packages:
+      - "apache2-mod_wsgi"
+    conf_files:
+      - name: "wsgi"
+        type: "sysconfig"

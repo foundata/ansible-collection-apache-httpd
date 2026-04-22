@@ -1,0 +1,86 @@
+# Main entry point for the role.
+
+---
+
+- name: "Main | Include role initialization tasks"
+  ansible.builtin.include_tasks:
+    file: "{{ role_path }}/tasks/init.yml"
+    apply:
+      tags:
+        - "always"
+        - "run_apache_httpd_always"
+  tags:
+    - "always"
+    - "run_apache_httpd_always"
+
+
+- name: "Main | Include setup tasks (install): best platform matches (if any), then default"
+  ansible.builtin.include_tasks:
+    file: "{{ __run_apache_httpd_task_file }}"
+    apply:
+      tags:
+        - "run_apache_httpd_setup"
+  vars:
+    __run_apache_httpd_task_file: "{{ role_path }}/tasks/setup/install/{{ __run_apache_httpd_loop_item }}"
+  when:
+    - run_apache_httpd_state == 'present'
+    - __run_apache_httpd_task_file is ansible.builtin.file
+  loop: "{{ __run_apache_httpd_platform_filenames_most_specific_first + ['default.yml'] }}"
+  loop_control:
+    loop_var: "__run_apache_httpd_loop_item"
+  tags:
+    - "run_apache_httpd_setup"
+
+
+- name: "Main | Include configuration tasks: best platform matches (if any), then default"
+  ansible.builtin.include_tasks:
+    file: "{{ __run_apache_httpd_task_file }}"
+    apply:
+      tags:
+        - "run_apache_httpd_config"
+  vars:
+    __run_apache_httpd_task_file: "{{ role_path }}/tasks/config/{{ __run_apache_httpd_loop_item }}"
+  when:
+    - run_apache_httpd_state == 'present'
+    - __run_apache_httpd_task_file is ansible.builtin.file
+  loop: "{{ __run_apache_httpd_platform_filenames_most_specific_first + ['default.yml'] }}"
+  loop_control:
+    loop_var: "__run_apache_httpd_loop_item"
+  tags:
+    - "run_apache_httpd_config"
+
+
+- name: "Main | Include service or daemon management tasks: best platform matches (if any), then default"
+  ansible.builtin.include_tasks:
+    file: "{{ __run_apache_httpd_task_file }}"
+    apply:
+      tags:
+        - "run_apache_httpd_service"
+  vars:
+    __run_apache_httpd_task_file: "{{ role_path }}/tasks/service/{{ __run_apache_httpd_loop_item }}"
+  when:
+    - run_apache_httpd_state == 'present'
+    - __run_apache_httpd_task_file is ansible.builtin.file
+  loop: "{{ __run_apache_httpd_platform_filenames_most_specific_first + ['default.yml'] }}"
+  loop_control:
+    loop_var: "__run_apache_httpd_loop_item"
+  tags:
+    - "run_apache_httpd_service"
+
+
+- name: "Main | Include setup tasks (uninstall): best platform matches (if any), then default"
+  ansible.builtin.include_tasks:
+    file: "{{ __run_apache_httpd_task_file }}"
+    apply:
+      tags:
+        - "run_apache_httpd_setup"
+  vars:
+    __run_apache_httpd_task_file: "{{ role_path }}/tasks/setup/uninstall/{{ __run_apache_httpd_loop_item }}"
+  when:
+    - run_apache_httpd_state == 'absent'
+    - __run_apache_httpd_task_file is ansible.builtin.file
+  loop: "{{ __run_apache_httpd_platform_filenames_most_specific_first + ['default.yml'] }}"
+  loop_control:
+    loop_var: "__run_apache_httpd_loop_item"
+  tags:
+    - "run_apache_httpd_setup"

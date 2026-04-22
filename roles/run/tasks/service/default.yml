@@ -1,0 +1,11 @@
+# Services and daemons: Manage their state, configure, or create them.
+
+---
+
+- name: "Service | Default | Ensure service state: {{ __run_apache_httpd_apache_httpd_servicename }}"
+  ansible.builtin.service:
+    name: "{{ __run_apache_httpd_apache_httpd_servicename }}"
+    state: "{{ 'started' if run_apache_httpd_service_state in ['enabled', 'running'] else 'stopped' if run_apache_httpd_service_state == 'disabled' }}"
+    enabled: "{{ true if run_apache_httpd_service_state == 'enabled' else false if run_apache_httpd_service_state in ['disabled', 'running'] }}"
+  when:
+    - run_apache_httpd_service_state != 'unmanaged'

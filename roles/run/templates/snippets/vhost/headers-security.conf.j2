@@ -1,0 +1,51 @@
+# {{ ansible_managed }}
+
+### Misc security HTTP headers
+<IfModule headers_module>
+
+# When serving user-supplied content, include a "X-Content-Type-Options: nosniff"
+# header along with the Content-Type: header, to disable content-type sniffing
+# on some browsers. This prevents the browser from interpreting files as a
+# different MIME type than what is specified in the Content-Type header
+# (e.g. treating a .txt as HTML), which can lead to XSS vulnerabilities.
+#
+# References:
+#
+# - https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Content-Type-Options
+# - https://owasp.org/www-project-secure-headers/#x-content-type-options
+Header always set X-Content-Type-Options "nosniff"
+
+
+# Control embedding into (i)frames (which might bypass HTTPS with
+# clickjacking). Restricting at least to "sameorigin" should make sense
+# for nearly all sites. "deny" or "allow-from <uri>" are also possible.
+#
+# Note: The Content-Security-Policy "frame-ancestors" directive supersedes
+# X-Frame-Options for modern browsers. However, X-Frame-Options is still
+# useful as a fallback for older clients that do not support CSP Level 2.
+#
+# References:
+#
+# - https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Frame-Options
+# - https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/frame-ancestors
+# - https://owasp.org/www-project-secure-headers/#x-frame-options
+Header always set X-Frame-Options "sameorigin"
+
+
+# Controls how much referrer information is sent when navigating from one
+# page to another. The default browser behavior typically sends the full
+# URL as a referrer, leaking path and query parameters to third parties.
+#
+# "strict-origin-when-cross-origin" balances privacy and functionality:
+# - Same-origin requests: full URL is sent
+# - Cross-origin requests (HTTPS->HTTPS): only the origin (scheme+host)
+# - Downgrade (HTTPS->HTTP): no referrer at all
+#
+# References:
+#
+# - https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referrer-Policy
+# - https://owasp.org/www-project-secure-headers/#referrer-policy
+# - https://w3c.github.io/webappsec-referrer-policy/
+Header always set Referrer-Policy "strict-origin-when-cross-origin"
+
+</IfModule>

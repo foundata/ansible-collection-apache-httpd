@@ -1,0 +1,113 @@
+# {{ ansible_managed }}
+{%  set settings = tpl_settings['tls-baseline'] %}
+<IfModule ssl_module>
+
+### Basic TLS config
+#
+# Following the Mozilla "Intermediate" TLS profile (Guideline v6.0).
+# Do not forget to define a certificate in your VirtualHost config after
+# including this snippet:
+#   SSLCertificateFile <path to cert>
+#   SSLCertificateKeyFile <path to key>
+#
+# ATTENTION: This will exclude real(!) legacy clients. You need to use another
+#            config if you must serve older MSIEs, Android 4 and comparable.
+#            See "References" for more information.
+#
+# References:
+#
+# - https://ssl-config.mozilla.org/
+# - https://wiki.mozilla.org/Security/Server_Side_TLS#Intermediate_compatibility_.28recommended.29
+# - https://ssl-config.mozilla.org/#server=apache&config=intermediate&hsts=1&ocsp=1&guideline=6.0
+SSLProtocol {{ settings['ssl_protocols'] }}
+
+# Let the client choose its preferred cipher. Modern clients make good choices
+# (e.g. preferring ChaCha20 on hardware without AES-NI). Mozilla Guideline v6.0
+# recommends 'off' for intermediate compatibility.
+SSLHonorCipherOrder {{ settings['ssl_honor_cipher_order'] }}
+
+# DH parameters for Diffie-Hellman key exchange (TLS 1.2 DHE suites). This role
+# ships the pre-defined ffdhe3072 group from RFC 7919 and deploys it
+# automatically. Using standardized, audited parameters is more secure than
+# randomly generating custom ones (which may have weak properties) and avoids
+# the slow `openssl dhparam` generation step.
+#
+# Note: The default cipher list no longer includes DHE suites (Mozilla dropped
+# them in Guideline v6.0). The SSLOpenSSLConfCmd is kept so users who re-add
+# DHE ciphers via run_apache_httpd_snippet_settings have DH parameters ready.
+#
+# References:
+#
+# - https://www.rfc-editor.org/rfc/rfc7919
+# - https://wiki.mozilla.org/Security/Server_Side_TLS?oldid=1212843#Pre-defined_DHE_groups
+SSLOpenSSLConfCmd DHParameters {{ settings['dhparam_path'] }}
+
+# Cipher suite selection, following Mozilla "Intermediate" profile (v6.0).
+# ECDHE-only; DHE suites have been removed by Mozilla as modern clients all
+# support ECDHE. Includes both AES-GCM and ChaCha20-Poly1305: ChaCha20 is
+# significantly faster on hardware without AES-NI acceleration (most ARM/mobile
+# devices) while AES-GCM benefits from hardware acceleration on modern x86 CPUs.
+#
+# References:
+#
+# - https://ssl-config.mozilla.org/
+# - https://wiki.mozilla.org/Security/Server_Side_TLS#Intermediate_compatibility_.28recommended.29
+# - https://ssl-config.mozilla.org/#server=apache&config=intermediate&hsts=1&ocsp=1&guideline=6.0
+SSLCipherSuite {{ settings['ssl_ciphers'] }}
+
+# Elliptic curves for ECDHE key exchange. X25519 (Curve25519) is the fastest
+# and preferred choice; prime256v1 (P-256) and secp384r1 (P-384) ensure broad
+# compatibility with clients that do not yet support X25519.
+#
+# Post-quantum: The default curve list (from vars/main.yml) prepends
+# X25519MLKEM768 (a hybrid ML-KEM/Kyber + X25519 key exchange) for
+# post-quantum resistance, following Mozilla Guideline v6.0. This requires
+# OpenSSL >= 3.5; platforms with older OpenSSL fall back to a classical-only
+# list via version-specific vars files.
+#
+# References:
+#
+# - https://ssl-config.mozilla.org/
+# - https://safecurves.cr.yp.to/
+SSLOpenSSLConfCmd Curves {{ settings['ecdh_curves'] }}
+
+
+
+### TLS Session Resumption
+#
+# Resuming an encrypted session through a session ID means that the server keeps
+# track of recent negotiated sessions using unique session IDs. This avoids a
+# full TLS handshake on reconnection, reducing latency and CPU usage.
+#
+# References:
+#
+# - https://ssl-config.mozilla.org/
+# - https://blog.cloudflare.com/tls-session-resumption-full-speed-and-secure/
+SSLSessionTickets off
+SSLSessionCache {{ settings['ssl_session_cache'] }}
+SSLSessionCacheTimeout {{ settings['ssl_session_timeout'] }}
+
+
+
+### OCSP Stapling
+#
+# Allows the server to send a cached OCSP response during the TLS handshake,
+# so the client does not need to contact the CA's OCSP responder itself. This
+# provides privacy advantages (clients do not leak which sites they visit to
+# the CA) and improves TLS handshake latency.
+#
+# References:
+#
+# - https://ssl-config.mozilla.org/
+# - https://wiki.mozilla.org/Security/Server_Side_TLS#OCSP_Stapling
+# - https://raymii.org/s/tutorials/OCSP_Stapling_on_nginx.html
+{% if settings['ocsp_stapling'] %}
+SSLUseStapling on
+SSLStaplingResponderTimeout 5
+SSLStaplingReturnResponderErrors off
+SSLStaplingCache shmcb:/run/httpd/ssl_stapling(32768)
+{% else %}
+SSLUseStapling off
+{% endif %}
+
+</IfModule>

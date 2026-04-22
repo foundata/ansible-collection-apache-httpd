@@ -1,0 +1,114 @@
+# Uninstall: Manage basic resource removal, such as packages or service users.
+
+---
+
+- name: "Setup | Uninstall | Gather service facts"
+  ansible.builtin.service_facts:
+
+
+- name: "Setup | Uninstall | Stop and disable service (best-effort): {{ __run_apache_httpd_apache_httpd_servicename }}"
+  ansible.builtin.systemd_service:
+    name: "{{ __run_apache_httpd_apache_httpd_servicename }}"
+    state: "stopped"
+    enabled: false
+  failed_when: false # best-effort service stop
+  when:
+    - __run_apache_httpd_apache_httpd_servicename in ansible_facts['services']
+
+
+- name: "Setup | Uninstall | Remove drop-in config files (snippets, vhosts)"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: "absent"
+  vars:
+    __run_apache_httpd_paths_to_remove: >-
+      {{
+        (
+          (
+            (run_apache_httpd_vhosts_config | default([]))
+            | ansible.builtin.map(attribute='name')
+            | ansible.builtin.map('ansible.builtin.regex_replace', '$', '.conf')
+            | ansible.builtin.list
+          )
+          +
+          (
+            (
+                query('ansible.builtin.fileglob', 'templates/snippets/*.conf.j2')
+              + query('ansible.builtin.fileglob', 'templates/snippets/global/*.conf.j2')
+              + query('ansible.builtin.fileglob', 'templates/snippets/directory/*.conf.j2')
+              + query('ansible.builtin.fileglob', 'templates/snippets/vhost/*.conf.j2')
+            )
+            | ansible.builtin.map('ansible.builtin.basename')
+            | ansible.builtin.map('ansible.builtin.regex_replace', '\.j2$', '')
+            | ansible.builtin.list
+          )
+          +
+          [
+            __run_apache_httpd_config_service_file_path,
+            __run_apache_httpd_config_service_ports_file_path,
+            __run_apache_httpd_config_service_dropin_snippets_dir_path
+          ]
+        ) | ansible.builtin.unique
+      }}
+  when:
+    - __run_apache_httpd_paths_to_remove | ansible.builtin.length > 0
+  loop: "{{ __run_apache_httpd_paths_to_remove }}"
+
+
+- name: "Setup | Uninstall | Remove vhosts directories (non-Debian platforms)"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: "absent"
+  when:
+    - ansible_facts['os_family'] not in ['Debian', 'Suse']
+  loop:
+    - "{{ __run_apache_httpd_config_service_dropin_vhosts_available_dir_path }}"
+    - "{{ __run_apache_httpd_config_service_dropin_vhosts_enabled_dir_path }}"
+
+
+- name: "Setup | Uninstall | Check if platform's original config backup exists"
+  ansible.builtin.stat:
+    path: "{{ __run_apache_httpd_config_service_file_distbackup_path }}"
+  register: __run_apache_httpd_distbackup_stat
+
+
+- name: "Setup | Uninstall | Restore platform's original config from backup"
+  when:
+    - __run_apache_httpd_distbackup_stat['stat']['exists']
+  block:
+    - name: "Setup | Uninstall | Restore config from backup file"
+      ansible.builtin.copy:
+        src: "{{ __run_apache_httpd_config_service_file_distbackup_path }}"
+        dest: "{{ __run_apache_httpd_config_service_file_path }}"
+        owner: "{{ __run_apache_httpd_config_service_file_owner }}"
+        group: "{{ __run_apache_httpd_config_service_file_group }}"
+        mode: "{{ __run_apache_httpd_config_service_file_mode }}"
+        remote_src: true
+
+    - name: "Setup | Uninstall | Remove backup notice comment from restored config"
+      ansible.builtin.lineinfile:
+        path: "{{ __run_apache_httpd_config_service_file_path }}"
+        line: "{{ __run_apache_httpd_config_service_file_distbackup_comment }}"
+        state: "absent"
+
+    - name: "Setup | Uninstall | Remove the config backup file"
+      ansible.builtin.file:
+        path: "{{ __run_apache_httpd_config_service_file_distbackup_path }}"
+        state: "absent"
+
+
+- name: "Setup | Uninstall | Remove module config directory (modules-enabled, non-Debian platforms)"
+  ansible.builtin.file:
+    path: "{{ __run_apache_httpd_config_service_dropin_modules_enabled_dir_path }}"
+    state: "absent"
+  when:
+    - ansible_facts['os_family'] != 'Debian'
+
+
+- name: "Setup | Uninstall | Remove packages"
+  ansible.builtin.package:
+    name: "{{ __run_apache_httpd_packages_uninstall }}"
+    state: "absent"
+  when:
+    - __run_apache_httpd_packages_uninstall is ansible.builtin.defined
+    - (__run_apache_httpd_packages_uninstall | ansible.builtin.length) > 0

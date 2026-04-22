@@ -1,0 +1,211 @@
+# Internal role variables specific to: RedHat (os_family or distribution)
+#
+# Only values specific to the platform and its functionality should be included
+# here. Variables in this file override those defined in vars/main.yml.
+
+---
+
+# List of package names to be installed when run_apache_httpd_state is
+# set to "present".
+__run_apache_httpd_packages_install:
+  - "httpd"
+
+
+# Remove distribution config files that conflict with the role's managed config.
+# - ssl.conf: contains "Listen 443" which duplicates ports.conf
+# - welcome.conf: default welcome page that interferes with VHost routing
+__run_apache_httpd_paths_removal:
+  - "/etc/httpd/conf.d/ssl.conf"
+  - "/etc/httpd/conf.d/welcome.conf"
+
+# ServerRoot. RedHat uses /etc/httpd/ as config root.
+__run_apache_httpd_server_root: "/etc/httpd"
+
+# Configuration file paths. RedHat uses /etc/httpd/ as config root.
+__run_apache_httpd_config_service_file_path: "/etc/httpd/conf/httpd.conf"
+__run_apache_httpd_config_service_file_distbackup_path: "/etc/httpd/conf/httpd.conf.ansible_role_distbackup"
+__run_apache_httpd_config_service_dropin_dir_path: "/etc/httpd/conf.d"
+__run_apache_httpd_config_service_dropin_vhosts_available_dir_path: "/etc/httpd/sites-available"
+__run_apache_httpd_config_service_dropin_vhosts_enabled_dir_path: "/etc/httpd/sites-enabled"
+__run_apache_httpd_config_service_dropin_modules_available_dir_path: "/etc/httpd/mods-available"
+__run_apache_httpd_config_service_dropin_modules_enabled_dir_path: "/etc/httpd/conf.modules.d"
+__run_apache_httpd_config_service_dropin_snippets_dir_path: "/etc/httpd/snippets"
+__run_apache_httpd_config_service_ports_file_path: "/etc/httpd/conf/ports.conf"
+
+
+# Daemon service name.
+__run_apache_httpd_apache_httpd_servicename: "httpd.service"
+
+# Config test command.
+__run_apache_httpd_config_test_cmd: "httpd -t"
+
+# Service user and group. RedHat uses "apache".
+__run_apache_httpd_service_user: "apache"
+__run_apache_httpd_service_group: "apache"
+
+# Snakeoil certificate. RedHat's mod_ssl ships a generator script
+# (/usr/libexec/httpd-ssl-gencerts) but the certs are only created by a
+# systemd service on first boot. The role generates them if missing.
+__run_apache_httpd_snakeoil_cert_path: "/etc/pki/tls/certs/localhost.crt"
+__run_apache_httpd_snakeoil_key_path: "/etc/pki/tls/private/localhost.key"
+
+# Log directory.
+__run_apache_httpd_log_dir_path: "/var/log/httpd"
+__run_apache_httpd_log_access_path: "/var/log/httpd/access_log"
+__run_apache_httpd_log_error_path: "/var/log/httpd/error_log"
+
+
+# Snippet settings overrides. RedHat uses /etc/pki/tls/ for certificates and
+# /run/httpd/ for runtime state.
+__run_apache_httpd_snippet_settings_overwrite:
+  tls-baseline:
+    dhparam_path: "/etc/pki/tls/certs/dhparam_ffdhe3072.pem"
+    ssl_session_cache: "shmcb:/run/httpd/ssl_scache(10485760)"
+
+
+# Module mapping: RedHat uses conf.modules.d/ for module loading. Most base
+# modules are loaded via 00-base.conf which ships with the httpd package.
+# External modules come as separate packages (mod_ssl, mod_http2, etc.) that
+# install their own conf files into conf.modules.d/.
+#
+# conf_files entries:
+#   type: "package_managed" — the package installs and manages the config file;
+#     the role only ensures the package is installed.
+__run_apache_httpd_modules_map_resources:
+  # --- Built-in modules (loaded via 00-base.conf, no action needed) ---
+  # These are included in the httpd package's 00-base.conf and are always
+  # loaded. They are listed here so the role can track them.
+  access_compat:
+    packages: []
+    conf_files: []
+  alias:
+    packages: []
+    conf_files: []
+  auth_basic:
+    packages: []
+    conf_files: []
+  authn_core:
+    packages: []
+    conf_files: []
+  authn_file:
+    packages: []
+    conf_files: []
+  authz_core:
+    packages: []
+    conf_files: []
+  authz_host:
+    packages: []
+    conf_files: []
+  authz_user:
+    packages: []
+    conf_files: []
+  autoindex:
+    packages: []
+    conf_files: []
+  deflate:
+    packages: []
+    conf_files: []
+  dir:
+    packages: []
+    conf_files: []
+  env:
+    packages: []
+    conf_files: []
+  expires:
+    packages: []
+    conf_files: []
+  filter:
+    packages: []
+    conf_files: []
+  headers:
+    packages: []
+    conf_files: []
+  mime:
+    packages: []
+    conf_files: []
+  negotiation:
+    packages: []
+    conf_files: []
+  reqtimeout:
+    packages: []
+    conf_files: []
+  rewrite:
+    packages: []
+    conf_files: []
+  setenvif:
+    packages: []
+    conf_files: []
+  socache_shmcb:
+    packages: []
+    conf_files: []
+  status:
+    packages: []
+    conf_files: []
+  # --- Modules in separate conf.modules.d files (from httpd package) ---
+  brotli:
+    packages: []
+    conf_files:
+      - name: "00-brotli.conf"
+        type: "package_managed"
+  proxy:
+    packages: []
+    conf_files:
+      - name: "00-proxy.conf"
+        type: "package_managed"
+  proxy_fcgi:
+    packages: []
+    conf_files:
+      - name: "00-proxy.conf"
+        type: "package_managed"
+  proxy_http:
+    packages: []
+    conf_files:
+      - name: "00-proxy.conf"
+        type: "package_managed"
+  proxy_http2:
+    packages: []
+    conf_files:
+      - name: "10-proxy_h2.conf"
+        type: "package_managed"
+  proxy_wstunnel:
+    packages: []
+    conf_files:
+      - name: "00-proxy.conf"
+        type: "package_managed"
+  # --- External modules (require separate packages) ---
+  ssl:
+    packages:
+      - "mod_ssl"
+    conf_files:
+      - name: "00-ssl.conf"
+        type: "package_managed"
+  http2:
+    packages:
+      - "mod_http2"
+    conf_files:
+      - name: "10-h2.conf"
+        type: "package_managed"
+  ldap:
+    packages:
+      - "mod_ldap"
+    conf_files: []
+  session:
+    packages:
+      - "mod_session"
+    conf_files: []
+  # --- MPM modules (configured via 00-mpm.conf from httpd package) ---
+  mpm_event:
+    packages: []
+    conf_files:
+      - name: "00-mpm.conf"
+        type: "package_managed"
+  mpm_worker:
+    packages: []
+    conf_files:
+      - name: "00-mpm.conf"
+        type: "package_managed"
+  mpm_prefork:
+    packages: []
+    conf_files:
+      - name: "00-mpm.conf"
+        type: "package_managed"

@@ -1,0 +1,321 @@
+# Default variables and values for this role.
+#
+# These variables are designed to be easily overridden (as they have a low
+# precedence) and typically allow users to customize the role's behavior.
+# Each variable should have a clear comment above it, describing its purpose
+# and how it fits into the role's functionality.
+
+---
+
+# Determines whether the managed resources should be `present` or `absent`.
+#
+# `present` ensures that required components, such as software packages, are
+# installed and configured.
+#
+# `absent` reverts changes as much as possible, such as removing packages,
+# deleting created users, stopping services, restoring modified settings, …
+#
+# - Type: str
+# - Required: No
+# - Default: present
+# - Choices: present, absent
+run_apache_httpd_state: "present"
+
+
+# If set to `true`, all managed packages will be upgraded during each Ansible
+# run (e.g., when the package provider detects a newer version than the
+# currently installed one).
+#
+# - Type: bool
+# - Required: No
+# - Default: false
+run_apache_httpd_autoupgrade: false
+
+
+# Defines the status of the service(s).
+#
+# `enabled`: Service is running and will start automatically at boot.
+#
+# `disabled`: Service is stopped and will not start automatically at boot.
+#
+# `running` Service is running but will not start automatically at boot. This
+# can be used to start a service on the first Ansible run without enabling it
+# for boot.
+#
+# `unmanaged`: Service will not start at boot, and Ansible will not manage its
+# running state. This is primarily useful when services are monitored and
+# managed by systems other than Ansible.
+#
+# The singular form (`service`) is used for simplicity. However, the defined
+# status applies to all services if multiple are being managed by this role.
+#
+# - Type: str
+# - Required: No
+# - Default: enabled
+# - Choices: enabled, disabled, running, unmanaged
+run_apache_httpd_service_state: "enabled"
+
+# Selects the Multi-Processing Module (MPM) that determines how Apache handles
+# concurrent connections.
+#
+# `event`: A hybrid multi-process/multi-threaded model with an event-driven
+# connection handling loop. Best for modern workloads.
+#
+# `worker`: A multi-process/multi-threaded model where each child process
+# serves requests with multiple threads.
+#
+# `prefork`: A non-threaded, pre-forking model. Required when using
+# non-thread-safe libraries such as `mod_php`.
+#
+# - Type: str
+# - Required: No
+# - Default: event
+# - Choices: event, worker, prefork
+run_apache_httpd_mpm: "event"
+
+# Controls whether the role includes a hardened catch-all `<VirtualHost>` in
+# the main configuration file.
+#
+# When set to `true`, a default VirtualHost is rendered that listens on ports
+# 80 and 443 with a minimal, restrictive configuration. This acts as a security
+# fallback preventing unintended content exposure when requests arrive for
+# unknown hostnames or manipulated SNI values.
+#
+# Set to `false` if you prefer to define your own catch-all VirtualHost via
+# `run_apache_httpd_vhosts_config`.
+#
+# - Type: bool
+# - Required: No
+# - Default: true
+run_apache_httpd_vhosts_default_manage: true
+
+# Additional Apache HTTPD configuration directives for the global (server-wide)
+# context of the main configuration file.
+#
+# The value is inserted verbatim into the rendered configuration file. Only
+# directives valid in the Apache server config context should be used here
+# (e.g., `Timeout`, `KeepAlive`, `LogLevel`, `ServerAdmin`).
+#
+# Unlike NGINX (which separates `events {}` and `http {}` blocks), Apache uses
+# a single flat global context for all server-wide directives. This variable
+# covers all of them.
+#
+# For VirtualHost definitions, use `run_apache_httpd_vhosts_config` instead.
+#
+# - Type: str
+# - Required: No
+# - Default:
+run_apache_httpd_main_config_block: ""
+
+# Controls whether the role injects curated baseline directives into the main
+# configuration file.
+#
+# When set to `true`, the role provides sane defaults for the global context
+# (e.g., `ServerTokens ProductOnly`, `ServerSignature Off`, `TraceEnable Off`,
+# `Timeout`, `KeepAlive`, log formats, `Listen` directives, MIME types, and
+# baseline security settings). These baseline directives are merged from
+# internal defaults and platform-specific overrides.
+#
+# Custom directives supplied via `run_apache_httpd_main_config_block` are
+# rendered alongside the baseline. If set to `false`, no baseline directives
+# are injected and you will likely need to provide essential directives yourself
+# via `run_apache_httpd_main_config_block` to get a working service.
+#
+# When `true`, the baseline also includes `Listen 80` and a conditional
+# `Listen 443` (active when the `ssl` module is enabled).
+#
+# - Type: bool
+# - Required: No
+# - Default: true
+run_apache_httpd_main_config_baseline_manage: true
+
+# List of VirtualHost definitions (sometimes called vHosts or sites) to manage.
+# Each entry describes a VirtualHost as a dictionary holding its name, enablement
+# state, and raw Apache configuration content.
+#
+# For each entry, the role renders a config file at
+# `sites-available/<name>.conf`. If `enabled: true`, a symlink is created in
+# `sites-enabled/` pointing to the file in `sites-available/`. The
+# `sites-enabled/` directory is included by the role's managed main
+# configuration via `IncludeOptional`, so only symlinked VirtualHosts become
+# active. Setting `enabled: false` keeps the `sites-available/` file in place
+# but removes the symlink, making it easy to temporarily disable a VirtualHost
+# without losing its configuration.
+#
+# Stale `sites-available/` and `sites-enabled/` files no longer listed here are
+# removed when `run_apache_httpd_vhosts_delete_unmanaged` is `true` (the
+# default).
+#
+# On SUSE-like platforms the directories `vhosts-available/` (instead of
+# `sites-available/`) and `vhosts.d/` (instead of `sites-enabled/`) are used as
+# SUSE uses these dirs and the "vHost" terminology by default.
+#
+# Example:
+#
+# ```yaml
+# run_apache_httpd_vhosts_config:
+#   - name: "example.com"
+#     enabled: true
+#     content: |
+#       <VirtualHost *:80>
+#           ServerName example.com
+#           Redirect permanent / https://example.com/
+#       </VirtualHost>
+#       <VirtualHost *:443>
+#           ServerName example.com
+#           DocumentRoot /var/www/example.com
+#
+#           SSLEngine on
+#           SSLCertificateFile /etc/letsencrypt/live/example.com/fullchain.pem
+#           SSLCertificateKeyFile /etc/letsencrypt/live/example.com/privkey.pem
+#
+#           Include snippets/vhost/headers-security.conf
+#           Include snippets/vhost/headers-hsts.conf
+#
+#           <Directory /var/www/example.com>
+#               Require all granted
+#           </Directory>
+#       </VirtualHost>
+# ```
+#
+# - Type: list
+# - Required: No
+# - Default: []
+run_apache_httpd_vhosts_config: []
+
+# Controls whether the role removes stale VirtualHost files that are not
+# declared in `run_apache_httpd_vhosts_config`.
+#
+# When set to `true`, any `*.conf` file or symlink found in `sites-available/`
+# or `sites-enabled/` whose name does not match an entry in
+# `run_apache_httpd_vhosts_config` is deleted. This keeps the managed
+# directories in sync with the declared list, treating
+# `run_apache_httpd_vhosts_config` as the single source of truth.
+#
+# When set to `false`, unknown files are left untouched. Use this if you manage
+# additional VirtualHosts outside of this role and want to prevent accidental
+# removal.
+#
+# - Type: bool
+# - Required: No
+# - Default: true
+run_apache_httpd_vhosts_delete_unmanaged: true
+
+# Controls whether the role ships and manages its curated Apache config snippets
+# (reusable, centrally maintained config blocks meant to be pulled into
+# `<VirtualHost>` / `<Directory>` blocks via
+# `Include snippets/<context>/<name>.conf`).
+#
+# When set to `true`, the role ensures the snippet directories
+# (`snippets/global/`, `snippets/vhost/`, `snippets/directory/`) exist and
+# renders all snippet templates shipped with the role into them. Snippet content
+# can be influenced via `run_apache_httpd_snippet_settings`.
+#
+# When set to `false`, the role skips creating the snippet directories and does
+# not render any snippet templates. Use this if you want to maintain your own
+# snippet library entirely outside of this role. Cleanup of stale files is also
+# gated by this variable: `run_apache_httpd_snippets_delete_unmanaged` only
+# takes effect while snippets are managed.
+#
+# - Type: bool
+# - Required: No
+# - Default: true
+run_apache_httpd_snippets_manage: true
+
+# Controls whether the role removes snippet files below the snippet directories
+# that are not managed by this role.
+#
+# When set to `true`, any files in the snippet subdirectories (`global/`,
+# `vhost/`, `directory/`) that were not rendered by the role's snippet templates
+# are deleted. This keeps the snippet directories clean and prevents stale or
+# conflicting snippets.
+#
+# When set to `false`, unknown files are left untouched. Use this if you
+# maintain additional custom snippets outside of this role.
+#
+# Only takes effect when `run_apache_httpd_snippets_manage` is `true`.
+#
+# - Type: bool
+# - Required: No
+# - Default: false
+run_apache_httpd_snippets_delete_unmanaged: false
+
+# User-level overrides for the configuration snippets shipped by this role.
+#
+# Each top-level key corresponds to a snippet name (e.g. `hsts`, `php-fpm`,
+# `tls-baseline`). Values are dictionaries whose keys map to template variables
+# used when rendering the snippet.
+#
+# Settings provided here take highest priority, overriding both the internal
+# defaults (see `__run_apache_httpd_snippet_settings_defaults` in
+# `vars/main.yml`) and any platform-specific overrides. Only the keys you
+# specify are overridden; all other settings keep their default values.
+#
+# Example:
+#
+# ```yaml
+# run_apache_httpd_snippet_settings:
+#   hsts:
+#     max_age: 63072000
+#     preload: true
+#   tls-baseline:
+#     resolvers:
+#       - "127.0.0.1"
+# ```
+#
+# - Type: dict
+# - Required: No
+# - Default: {}
+run_apache_httpd_snippet_settings: {}
+
+# List of Apache module short names to enable.
+#
+# Module names correspond to what `a2enmod` accepts or the `.so` filename with
+# the `mod_` prefix and `_module`/`.so` suffix stripped (e.g. `ssl` from
+# `mod_ssl.so`, `proxy_fcgi` from `mod_proxy_fcgi.so`).
+#
+# Example:
+#
+# ```yaml
+# run_apache_httpd_modules_enabled:
+#   - "ssl"
+#   - "headers"
+#   - "rewrite"
+#   - "proxy_fcgi"
+#   - "http2"
+#   - "brotli"
+# ```
+#
+# Only modules known to the platform-specific
+# `__run_apache_httpd_modules_map_resources` mapping (see `vars/main.yml` and
+# the platform overrides in `vars/debian.yml`, `vars/redhat.yml`,
+# `vars/suse.yml`) are managed by this role. Modules not present in that
+# mapping are silently skipped; if you need to enable such a module, add the
+# necessary `LoadModule` configuration via your own tasks on top of this role.
+#
+# For each listed and known module, the role installs required distribution
+# packages automatically and enables the module using the platform's native
+# mechanism.
+#
+# - Type: list
+# - Required: No
+# - Default: []
+run_apache_httpd_modules_enabled: []
+
+# Controls whether the role disables modules that are not declared in
+# `run_apache_httpd_modules_enabled`.
+#
+# When set to `true`, modules not listed in `run_apache_httpd_modules_enabled`
+# (and not part of the platform's essential baseline or the active MPM module)
+# are disabled using the platform's native mechanism. Platform-essential modules
+# (e.g., `authz_core`, `dir`, `mime` on Debian) and the MPM module matching
+# `run_apache_httpd_mpm` are always preserved.
+#
+# When set to `false`, unknown modules are left untouched. Use this if you
+# manage additional modules outside of this role and want to prevent accidental
+# unavailability of modules loaded by default on your platform.
+#
+# - Type: bool
+# - Required: No
+# - Default: true
+run_apache_httpd_modules_disable_unmanaged: true

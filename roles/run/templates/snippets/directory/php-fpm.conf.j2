@@ -1,0 +1,21 @@
+# {{ ansible_managed }}
+{%  set settings = tpl_settings['php-fpm'] | ansible.builtin.default({}) %}
+
+### PHP-FPM handler via mod_proxy_fcgi
+#
+# Routes PHP requests to a PHP-FPM backend via the FastCGI proxy. Requires
+# mod_proxy and mod_proxy_fcgi to be enabled.
+#
+# References:
+#
+# - https://httpd.apache.org/docs/current/mod/mod_proxy_fcgi.html
+# - https://wiki.apache.org/httpd/PHP-FPM
+<IfModule proxy_fcgi_module>
+<FilesMatch "\.php$">
+{%  if settings['type'] | ansible.builtin.default('socket') == 'socket' %}
+    SetHandler "proxy:unix:{{ settings['socket'] | ansible.builtin.default('/run/php/php-fpm.sock') }}|fcgi://localhost"
+{% else %}
+    SetHandler "proxy:fcgi://{{ settings['tcp_host'] | ansible.builtin.default('127.0.0.1') }}:{{ settings['tcp_port'] | ansible.builtin.default(9000) }}"
+{%  endif %}
+</FilesMatch>
+</IfModule>
