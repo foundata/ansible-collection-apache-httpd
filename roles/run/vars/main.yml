@@ -106,15 +106,17 @@ __run_apache_httpd_config_service_file_group: "root"
 __run_apache_httpd_config_service_file_mode: "u=rw,g=r,o=r" # 0644
 
 # Backup of the original distribution config (before role takes over).
-__run_apache_httpd_config_service_file_distbackup_path: "{{ __run_apache_httpd_config_service_file_path }}.ansible_role_distbackup"
-__run_apache_httpd_config_service_file_distbackup_owner: "root"
-__run_apache_httpd_config_service_file_distbackup_group: "root"
-__run_apache_httpd_config_service_file_distbackup_mode: "u=rw,g=r,o=r" # 0644
+__run_apache_httpd_config_service_file_distbackup_path: "{{ __run_apache_httpd_config_service_file_path }}.dist.bak"
+__run_apache_httpd_config_service_file_distbackup_owner: "{{ __run_apache_httpd_config_service_file_owner }}"
+__run_apache_httpd_config_service_file_distbackup_group: "{{ __run_apache_httpd_config_service_file_group }}"
+__run_apache_httpd_config_service_file_distbackup_mode: "{{ __run_apache_httpd_config_service_file_mode }}"
 
 __run_apache_httpd_config_service_file_distbackup_comment: >-
-  # This is a backup of the platform's original Apache config before Ansible
-  took over management of the file
+  # This is a backup of the platform's original Apache config before Ansible took over management of the file
 
+# The role uses a Debian-style available/enabled pattern on all platforms.
+# On non-Debian platforms these directories are created by the role and an
+# IncludeOptional is added to the managed main config file.
 __run_apache_httpd_config_service_dropin_dir_path: "/etc/apache2/conf-enabled"
 __run_apache_httpd_config_service_dropin_dir_owner: "{{ __run_apache_httpd_config_service_file_owner }}"
 __run_apache_httpd_config_service_dropin_dir_group: "{{ __run_apache_httpd_config_service_file_group }}"
@@ -124,10 +126,6 @@ __run_apache_httpd_config_service_dropin_file_owner: "{{ __run_apache_httpd_conf
 __run_apache_httpd_config_service_dropin_file_group: "{{ __run_apache_httpd_config_service_file_group }}"
 __run_apache_httpd_config_service_dropin_file_mode: "{{ __run_apache_httpd_config_service_file_mode }}"
 
-# VirtualHost / sites directories. The role uses a Debian-style
-# available/enabled pattern on all platforms. On non-Debian platforms these
-# directories are created by the role and an IncludeOptional is added to the
-# managed main config file.
 __run_apache_httpd_config_service_dropin_vhosts_available_dir_path: "/etc/apache2/sites-available"
 __run_apache_httpd_config_service_dropin_vhosts_available_dir_owner: "{{ __run_apache_httpd_config_service_file_owner }}"
 __run_apache_httpd_config_service_dropin_vhosts_available_dir_group: "{{ __run_apache_httpd_config_service_file_group }}"
@@ -153,13 +151,17 @@ __run_apache_httpd_config_service_dropin_snippets_dir_owner: "{{ __run_apache_ht
 __run_apache_httpd_config_service_dropin_snippets_dir_group: "{{ __run_apache_httpd_config_service_file_group }}"
 __run_apache_httpd_config_service_dropin_snippets_dir_mode: "{{ __run_apache_httpd_config_service_dropin_dir_mode }}"
 
+# Ports configuration file (rendered by the role when baseline is managed).
+__run_apache_httpd_config_service_ports_file_path: "/etc/apache2/ports.conf"
+
 __run_apache_httpd_log_dir_path: "/var/log/apache2"
 __run_apache_httpd_log_access_path: "{{ __run_apache_httpd_log_dir_path }}/access.log"
 __run_apache_httpd_log_error_path: "{{ __run_apache_httpd_log_dir_path }}/error.log"
 
-
-# Ports configuration file (rendered by the role when baseline is managed).
-__run_apache_httpd_config_service_ports_file_path: "/etc/apache2/ports.conf"
+__run_apache_httpd_dhparam_ffdhe3072_path: "/etc/ssl/certs/dhparam_ffdhe3072.pem"
+__run_apache_httpd_dhparam_ffdhe3072_owner: "root"
+__run_apache_httpd_dhparam_ffdhe3072_group: "root"
+__run_apache_httpd_dhparam_ffdhe3072_mode: "u=rw,g=r,o=r" # 0644 (DH parameters are public, not secret)
 
 
 # Mapping of Apache module short names to their platform-specific resources.
@@ -197,10 +199,6 @@ __run_apache_httpd_modules_map_resources: {}
 __run_apache_httpd_modules_essential: []
 
 
-###############################################################################
-# Snippet settings (three-tier merge: defaults < platform overwrite < user)
-###############################################################################
-
 # Internal defaults for snippet template variables. Platform-specific overrides
 # are defined in __run_apache_httpd_snippet_settings_overwrite. User overrides
 # in run_apache_httpd_snippet_settings take highest priority.
@@ -215,7 +213,7 @@ __run_apache_httpd_snippet_settings_defaults:
     tcp_host: "127.0.0.1"
     tcp_port: 9000
   tls-baseline:
-    dhparam_path: "/etc/ssl/certs/dhparam_ffdhe3072.pem"
+    dhparam_path: "{{ __run_apache_httpd_dhparam_ffdhe3072_path }}"
     ssl_protocols: "all -SSLv2 -SSLv3 -TLSv1 -TLSv1.1"
     # Mozilla Intermediate cipher list (Guideline v6.0)
     # https://ssl-config.mozilla.org/
@@ -248,10 +246,6 @@ __run_apache_httpd_snippet_settings_defaults:
 # Populated by platform-specific vars files.
 __run_apache_httpd_snippet_settings_overwrite: {}
 
-
-###############################################################################
-# Baseline directives (three-tier merge: defaults < platform overwrite < user)
-###############################################################################
 
 # Default baseline directives for the main config. These are security-oriented
 # sane defaults that the role injects when run_apache_httpd_main_config_baseline_manage
