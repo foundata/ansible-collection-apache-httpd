@@ -11,11 +11,10 @@ __run_apache_httpd_packages_install:
   - "apache2"
   - "apache2-utils"
 
-
 # Configuration file paths. SUSE uses /etc/apache2/ with httpd.conf as the
 # main config file name.
 __run_apache_httpd_config_service_file_path: "/etc/apache2/httpd.conf"
-__run_apache_httpd_config_service_file_distbackup_path: "/etc/apache2/httpd.conf.ansible_role_distbackup"
+__run_apache_httpd_config_service_file_distbackup_path: "{{ __run_apache_httpd_config_service_file_path }}.dist.bak"
 __run_apache_httpd_config_service_dropin_dir_path: "/etc/apache2/conf.d"
 
 # SUSE uses "vhosts" terminology and different directory names.
@@ -35,7 +34,6 @@ __run_apache_httpd_config_service_ports_file_path: "/etc/apache2/listen.conf"
 # Path to the SUSE sysconfig file for Apache. Used for module management and
 # MPM selection on SUSE.
 __run_apache_httpd_sysconfig_path: "/etc/sysconfig/apache2"
-
 
 # Config test command. SUSE's apachectl is provided by apache2-utils and wraps
 # start_apache2, which handles sysconfig preprocessing (module loading, etc.).
@@ -77,19 +75,20 @@ __run_apache_httpd_modules_essential:
 __run_apache_httpd_snakeoil_cert_path: "/etc/apache2/ssl.crt/snakeoil.pem"
 __run_apache_httpd_snakeoil_key_path: "/etc/apache2/ssl.key/snakeoil.key"
 
+# # Diffie-Hellman(DH) parameters file. Paths follow SUSE's /etc/apache2/ssl.*/ convention.
+__run_apache_httpd_dhparam_ffdhe3072_path: "/etc/apache2/ssl.prm/dhparam_ffdhe3072.pem"
+
 # Log directory.
 __run_apache_httpd_log_dir_path: "/var/log/apache2"
 __run_apache_httpd_log_access_path: "/var/log/apache2/access_log"
 __run_apache_httpd_log_error_path: "/var/log/apache2/error_log"
 
-
 # Snippet settings overrides. SUSE uses /etc/apache2/ssl.crt/ for certs and
 # /var/lib/apache2/ for runtime state.
 __run_apache_httpd_snippet_settings_overwrite:
   tls-baseline:
-    dhparam_path: "/etc/apache2/ssl.prm/dhparam_ffdhe3072.pem"
+    dhparam_path: "{{ __run_apache_httpd_dhparam_ffdhe3072_path }}"
     ssl_session_cache: "shmcb:/var/lib/apache2/ssl_scache(10485760)"
-
 
 # Module mapping: SUSE manages modules via the APACHE_MODULES variable in
 # /etc/sysconfig/apache2. The a2enmod helper edits this variable. Module .so

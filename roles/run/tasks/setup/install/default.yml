@@ -74,3 +74,26 @@
     - __run_apache_httpd_paths_removal is ansible.builtin.defined
     - (__run_apache_httpd_paths_removal | ansible.builtin.length) > 0
   loop: "{{ __run_apache_httpd_paths_removal }}"
+
+
+- name: "Setup | Install | Default | Neutralize distribution config files (overwrite to survive package updates)"
+  ansible.builtin.copy:
+    dest: "{{ item }}"
+    # FIXME make the content platform depended (restore instructions not only Red Hat)
+    # and add the neutralize pattern to the skeletons of all roles
+    content: |
+      # Managed by Ansible (foundata.apache_httpd.run)
+      #
+      # Content intentionally cleared. The original distribution file conflicted
+      # with configuration managed by the foundata.apache_httpd.run role.
+      #
+      # To restore the original file content, reinstall the owning package:
+      #   rpm -qf {{ item }}           # find the package that owns this file
+      #   dnf reinstall <package>      # reinstall it to restore the original
+    owner: "root"
+    group: "root"
+    mode: "0644"
+  when:
+    - __run_apache_httpd_paths_neutralize is ansible.builtin.defined
+    - (__run_apache_httpd_paths_neutralize | ansible.builtin.length) > 0
+  loop: "{{ __run_apache_httpd_paths_neutralize }}"

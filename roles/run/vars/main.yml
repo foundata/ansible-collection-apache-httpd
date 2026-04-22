@@ -91,6 +91,13 @@ __run_apache_httpd_packages_removal: []
 __run_apache_httpd_paths_removal: []
 
 
+# List of paths of config files to be overwritten with a harmless managed comment
+# instead of being deleted. This is needed on platforms where the package manager
+# reinstalls deleted conffiles on package update (e.g. RPM with %config(noreplace)
+# restores missing files but preserves modified ones).
+__run_apache_httpd_paths_neutralize: []
+
+
 # ServerRoot directory. Apache resolves relative paths in Include directives,
 # LoadModule statements, and similar from this directory. Must match the
 # platform's config root so that relative "Include snippets/..." paths work.
@@ -174,6 +181,7 @@ __run_apache_httpd_log_dir_path: "/var/log/apache2"
 __run_apache_httpd_log_access_path: "{{ __run_apache_httpd_log_dir_path }}/access.log"
 __run_apache_httpd_log_error_path: "{{ __run_apache_httpd_log_dir_path }}/error.log"
 
+# Diffie-Hellman(DH) parameters file
 __run_apache_httpd_dhparam_ffdhe3072_path: "/etc/ssl/certs/dhparam_ffdhe3072.pem"
 __run_apache_httpd_dhparam_ffdhe3072_owner: "root"
 __run_apache_httpd_dhparam_ffdhe3072_group: "root"
@@ -183,8 +191,8 @@ __run_apache_httpd_dhparam_ffdhe3072_mode: "u=rw,g=r,o=r" # 0644 (DH parameters 
 # Mapping of Apache module short names to their platform-specific resources.
 #
 # Module naming convention:
-# Use the short name as accepted by `a2enmod` or derived from the .so filename
-# by stripping the `mod_` prefix and `.so` suffix. Examples:
+# Use the short name as accepted by a2enmod or derived from the .so filename
+# by stripping the mod_ prefix and .so suffix. Examples:
 #   mod_ssl.so           -> "ssl"
 #   mod_proxy_fcgi.so    -> "proxy_fcgi"
 #   mod_http2.so         -> "http2"

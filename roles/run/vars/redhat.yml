@@ -11,10 +11,14 @@ __run_apache_httpd_packages_install:
   - "httpd"
 
 
-# Remove distribution config files that conflict with the role's managed config.
+# Neutralize distribution config files that conflict with the role's managed
+# config. These are RPM %config(noreplace) conffiles: deleting them would cause
+# RPM to reinstall them on the next package update. Overwriting with a managed
+# comment keeps them "modified" so RPM preserves them (saving new versions as
+# .rpmnew instead).
 # - ssl.conf: contains "Listen 443" which duplicates ports.conf
 # - welcome.conf: default welcome page that interferes with VHost routing
-__run_apache_httpd_paths_removal:
+__run_apache_httpd_paths_neutralize:
   - "/etc/httpd/conf.d/ssl.conf"
   - "/etc/httpd/conf.d/welcome.conf"
 
@@ -22,15 +26,15 @@ __run_apache_httpd_paths_removal:
 __run_apache_httpd_server_root: "/etc/httpd"
 
 # Configuration file paths. RedHat uses /etc/httpd/ as config root.
-__run_apache_httpd_config_service_file_path: "/etc/httpd/conf/httpd.conf"
-__run_apache_httpd_config_service_file_distbackup_path: "/etc/httpd/conf/httpd.conf.ansible_role_distbackup"
-__run_apache_httpd_config_service_dropin_dir_path: "/etc/httpd/conf.d"
-__run_apache_httpd_config_service_dropin_vhosts_available_dir_path: "/etc/httpd/sites-available"
-__run_apache_httpd_config_service_dropin_vhosts_enabled_dir_path: "/etc/httpd/sites-enabled"
-__run_apache_httpd_config_service_dropin_modules_available_dir_path: "/etc/httpd/mods-available"
-__run_apache_httpd_config_service_dropin_modules_enabled_dir_path: "/etc/httpd/conf.modules.d"
-__run_apache_httpd_config_service_dropin_snippets_dir_path: "/etc/httpd/snippets"
-__run_apache_httpd_config_service_ports_file_path: "/etc/httpd/conf/ports.conf"
+__run_apache_httpd_config_service_file_path: "{{ __run_apache_httpd_server_root }}/conf/httpd.conf"
+__run_apache_httpd_config_service_file_distbackup_path: "{{ __run_apache_httpd_config_service_file_path }}.dist.bak"
+__run_apache_httpd_config_service_dropin_dir_path: "{{ __run_apache_httpd_server_root }}/conf.d"
+__run_apache_httpd_config_service_dropin_vhosts_available_dir_path: "{{ __run_apache_httpd_server_root }}/sites-available"
+__run_apache_httpd_config_service_dropin_vhosts_enabled_dir_path: "{{ __run_apache_httpd_server_root }}/sites-enabled"
+__run_apache_httpd_config_service_dropin_modules_available_dir_path: "{{ __run_apache_httpd_server_root }}/mods-available"
+__run_apache_httpd_config_service_dropin_modules_enabled_dir_path: "{{ __run_apache_httpd_server_root }}/conf.modules.d"
+__run_apache_httpd_config_service_dropin_snippets_dir_path: "{{ __run_apache_httpd_server_root }}/snippets"
+__run_apache_httpd_config_service_ports_file_path: "{{ __run_apache_httpd_server_root }}/conf/ports.conf"
 
 
 # Daemon service name.
