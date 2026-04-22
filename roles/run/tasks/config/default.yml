@@ -221,21 +221,20 @@
           group: "{{ __run_apache_httpd_config_service_dropin_snippets_dir_group }}"
           mode: "{{ __run_apache_httpd_config_service_dropin_snippets_dir_mode }}"
 
-        # FIXME own variables
-        - path: "{{ __run_apache_httpd_config_service_dropin_snippets_dir_path }}/global"
-          owner: "{{ __run_apache_httpd_config_service_dropin_snippets_dir_owner }}"
-          group: "{{ __run_apache_httpd_config_service_dropin_snippets_dir_group }}"
-          mode: "{{ __run_apache_httpd_config_service_dropin_snippets_dir_mode }}"
+        - path: "{{ __run_apache_httpd_config_service_dropin_snippets_global_dir_path }}"
+          owner: "{{ __run_apache_httpd_config_service_dropin_snippets_global_dir_owner }}"
+          group: "{{ __run_apache_httpd_config_service_dropin_snippets_global_dir_group }}"
+          mode: "{{ __run_apache_httpd_config_service_dropin_snippets_global_dir_mode }}"
 
-        - path: "{{ __run_apache_httpd_config_service_dropin_snippets_dir_path }}/vhost"
-          owner: "{{ __run_apache_httpd_config_service_dropin_snippets_dir_owner }}"
-          group: "{{ __run_apache_httpd_config_service_dropin_snippets_dir_group }}"
-          mode: "{{ __run_apache_httpd_config_service_dropin_snippets_dir_mode }}"
+        - path: "{{ __run_apache_httpd_config_service_dropin_snippets_vhost_dir_path }}"
+          owner: "{{ __run_apache_httpd_config_service_dropin_snippets_vhost_dir_owner }}"
+          group: "{{ __run_apache_httpd_config_service_dropin_snippets_vhost_dir_group }}"
+          mode: "{{ __run_apache_httpd_config_service_dropin_snippets_vhost_dir_mode }}"
 
-        - path: "{{ __run_apache_httpd_config_service_dropin_snippets_dir_path }}/directory"
-          owner: "{{ __run_apache_httpd_config_service_dropin_snippets_dir_owner }}"
-          group: "{{ __run_apache_httpd_config_service_dropin_snippets_dir_group }}"
-          mode: "{{ __run_apache_httpd_config_service_dropin_snippets_dir_mode }}"
+        - path: "{{ __run_apache_httpd_config_service_dropin_snippets_directory_dir_path }}"
+          owner: "{{ __run_apache_httpd_config_service_dropin_snippets_directory_dir_owner }}"
+          group: "{{ __run_apache_httpd_config_service_dropin_snippets_directory_dir_group }}"
+          mode: "{{ __run_apache_httpd_config_service_dropin_snippets_directory_dir_mode }}"
       loop_control:
         label: "{{ item['path'] }}"
       notify:

@@ -151,6 +151,22 @@ __run_apache_httpd_config_service_dropin_snippets_dir_owner: "{{ __run_apache_ht
 __run_apache_httpd_config_service_dropin_snippets_dir_group: "{{ __run_apache_httpd_config_service_file_group }}"
 __run_apache_httpd_config_service_dropin_snippets_dir_mode: "{{ __run_apache_httpd_config_service_dropin_dir_mode }}"
 
+__run_apache_httpd_config_service_dropin_snippets_global_dir_path: "{{ __run_apache_httpd_config_service_dropin_snippets_dir_path }}/global"
+__run_apache_httpd_config_service_dropin_snippets_global_dir_owner: "{{ __run_apache_httpd_config_service_dropin_snippets_dir_owner }}"
+__run_apache_httpd_config_service_dropin_snippets_global_dir_group: "{{ __run_apache_httpd_config_service_dropin_snippets_dir_group }}"
+__run_apache_httpd_config_service_dropin_snippets_global_dir_mode: "{{ __run_apache_httpd_config_service_dropin_snippets_dir_mode }}"
+
+__run_apache_httpd_config_service_dropin_snippets_vhost_dir_path: "{{ __run_apache_httpd_config_service_dropin_snippets_dir_path }}/vhost"
+__run_apache_httpd_config_service_dropin_snippets_vhost_dir_owner: "{{ __run_apache_httpd_config_service_dropin_snippets_dir_owner }}"
+__run_apache_httpd_config_service_dropin_snippets_vhost_dir_group: "{{ __run_apache_httpd_config_service_dropin_snippets_dir_group }}"
+__run_apache_httpd_config_service_dropin_snippets_vhost_dir_mode: "{{ __run_apache_httpd_config_service_dropin_snippets_dir_mode }}"
+
+__run_apache_httpd_config_service_dropin_snippets_directory_dir_path: "{{ __run_apache_httpd_config_service_dropin_snippets_dir_path }}/directory"
+__run_apache_httpd_config_service_dropin_snippets_directory_dir_owner: "{{ __run_apache_httpd_config_service_dropin_snippets_dir_owner }}"
+__run_apache_httpd_config_service_dropin_snippets_directory_dir_group: "{{ __run_apache_httpd_config_service_dropin_snippets_dir_group }}"
+__run_apache_httpd_config_service_dropin_snippets_directory_dir_mode: "{{ __run_apache_httpd_config_service_dropin_snippets_dir_mode }}"
+
+
 # Ports configuration file (rendered by the role when baseline is managed).
 __run_apache_httpd_config_service_ports_file_path: "/etc/apache2/ports.conf"
 
