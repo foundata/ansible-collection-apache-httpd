@@ -79,8 +79,6 @@
 - name: "Setup | Install | Default | Neutralize distribution config files (overwrite to survive package updates)"
   ansible.builtin.copy:
     dest: "{{ item }}"
-    # FIXME make the content platform depended (restore instructions not only Red Hat)
-    # and add the neutralize pattern to the skeletons of all roles
     content: |
       # Managed by Ansible (foundata.apache_httpd.run)
       #
@@ -88,8 +86,18 @@
       # with configuration managed by the foundata.apache_httpd.run role.
       #
       # To restore the original file content, reinstall the owning package:
-      #   rpm -qf {{ item }}           # find the package that owns this file
-      #   dnf reinstall <package>      # reinstall it to restore the original
+      {% if (ansible_facts['os_family'] | ansible.builtin.lower) == 'debian' %}
+      #   dpkg -S {{ item }}                          # find the package that owns this file
+      #   apt-get install --reinstall <package>       # reinstall it to restore the original
+      {% elif (ansible_facts['os_family'] | ansible.builtin.lower) == 'suse' %}
+      #   rpm -qf {{ item }}                          # find the package that owns this file
+      #   zypper install --force <package>            # reinstall it to restore the original
+      {% elif (ansible_facts['os_family'] | ansible.builtin.lower) == 'redhat' %}
+      #   rpm -qf {{ item }}                          # find the package that owns this file
+      #   dnf reinstall <package>                     # reinstall it to restore the original
+      {% else %}
+      #   Use your package manager to find the owning package and reinstall it.
+      {% endif %}
     owner: "root"
     group: "root"
     mode: "0644"
