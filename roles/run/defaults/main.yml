@@ -59,13 +59,20 @@ run_apache_httpd_service_state: "enabled"
 # concurrent connections.
 #
 # `event`: A hybrid multi-process/multi-threaded model with an event-driven
-# connection handling loop. Best for modern workloads.
+# connection handling loop. Best for modern workloads, especially with
+# keep-alive connections. Default on Debian and Red Hat.
 #
-# `worker`: A multi-process/multi-threaded model where each child process
-# serves requests with multiple threads.
+# `worker`: A multi-process/multi-threaded model where each child process serves
+# requests with multiple threads. Good for high-traffic sites that need
+# concurrency without the overhead of one-process-per-connection.
 #
-# `prefork`: A non-threaded, pre-forking model. Required when using
-# non-thread-safe libraries such as `mod_php`.
+# `prefork`: A non-threaded, pre-forking model where each child process handles
+# one connection at a time. Required when using non-thread-safe libraries such
+# as `mod_php`. Default on SUSE.
+#
+# On Debian-like platforms the role enables the corresponding `mpm_*` module. On
+# Red Hat it adjusts `conf.modules.d/00-mpm.conf`. On SUSE it sets the
+# `APACHE_MPM` sysconfig variable.
 #
 # - Type: str
 # - Required: No
@@ -73,11 +80,11 @@ run_apache_httpd_service_state: "enabled"
 # - Choices: event, worker, prefork
 run_apache_httpd_mpm: "event"
 
-# Controls whether the role includes a hardened catch-all `<VirtualHost>` in
-# the main configuration file.
+# Controls whether the role includes a hardened catch-all `<VirtualHost>` in the
+# main configuration file.
 #
-# When set to `true`, a default VirtualHost is rendered that listens on ports
-# 80 and 443 with a minimal, restrictive configuration. This acts as a security
+# When set to `true`, a default VirtualHost is rendered that listens on ports 80
+# and 443 with a minimal, restrictive configuration. This acts as a security
 # fallback preventing unintended content exposure when requests arrive for
 # unknown hostnames or manipulated SNI values.
 #
@@ -96,15 +103,15 @@ run_apache_httpd_vhosts_default_manage: true
 # directives valid in the Apache server config context should be used here
 # (e.g., `Timeout`, `KeepAlive`, `LogLevel`, `ServerAdmin`).
 #
-# Unlike NGINX (which separates `events {}` and `http {}` blocks), Apache uses
-# a single flat global context for all server-wide directives. This variable
+# Unlike NGINX (which separates `events {}` and `http {}` blocks), Apache uses a
+# single flat global context for all server-wide directives. This variable
 # covers all of them.
 #
 # For VirtualHost definitions, use `run_apache_httpd_vhosts_config` instead.
 #
 # - Type: str
 # - Required: No
-# - Default:
+# - Default: 
 run_apache_httpd_main_config_block: ""
 
 # Controls whether the role injects curated baseline directives into the main
@@ -117,12 +124,14 @@ run_apache_httpd_main_config_block: ""
 # internal defaults and platform-specific overrides.
 #
 # Custom directives supplied via `run_apache_httpd_main_config_block` are
-# rendered alongside the baseline. If set to `false`, no baseline directives
-# are injected and you will likely need to provide essential directives yourself
-# via `run_apache_httpd_main_config_block` to get a working service.
+# rendered alongside the baseline. If set to `false`, no baseline directives are
+# injected and you will likely need to provide essential directives yourself via
+# `run_apache_httpd_main_config_block` to get a working service.
 #
-# When `true`, the baseline also includes `Listen 80` and a conditional
-# `Listen 443` (active when the `ssl` module is enabled).
+# When `true`, the baseline also includes `Listen 80` and a conditional `Listen
+# 443` (active when the `ssl` module is enabled). If you need custom listen
+# ports, provide them via `run_apache_httpd_main_config_block` and set this to
+# `false`, or add additional `Listen` directives alongside the baseline.
 #
 # - Type: bool
 # - Required: No
@@ -130,25 +139,26 @@ run_apache_httpd_main_config_block: ""
 run_apache_httpd_main_config_baseline_manage: true
 
 # List of VirtualHost definitions (sometimes called vHosts or sites) to manage.
-# Each entry describes a VirtualHost as a dictionary holding its name, enablement
-# state, and raw Apache configuration content.
+# Each entry describes a VirtualHost as a dictionary holding its name,
+# enablement state, and raw Apache configuration content.
 #
 # For each entry, the role renders a config file at
-# `sites-available/<name>.conf`. If `enabled: true`, a symlink is created in
-# `sites-enabled/` pointing to the file in `sites-available/`. The
-# `sites-enabled/` directory is included by the role's managed main
-# configuration via `IncludeOptional`, so only symlinked VirtualHosts become
-# active. Setting `enabled: false` keeps the `sites-available/` file in place
-# but removes the symlink, making it easy to temporarily disable a VirtualHost
-# without losing its configuration.
+# `sites-available/<name>.conf` (or `vhosts-available/<name>.conf` on SUSE-like
+# platforms). If `enabled: true`, a symlink is created in `sites-enabled/` (or
+# `vhosts.d/` on SUSE) pointing to the file in the available directory. The
+# enabled directory is included by the role's managed main configuration via
+# `IncludeOptional`, so only symlinked VirtualHosts become active.
 #
-# Stale `sites-available/` and `sites-enabled/` files no longer listed here are
-# removed when `run_apache_httpd_vhosts_delete_unmanaged` is `true` (the
-# default).
+# Setting `enabled: false` keeps the available file in place but removes the
+# symlink, making it easy to temporarily disable a VirtualHost without losing
+# its configuration.
 #
-# On SUSE-like platforms the directories `vhosts-available/` (instead of
-# `sites-available/`) and `vhosts.d/` (instead of `sites-enabled/`) are used as
-# SUSE uses these dirs and the "vHost" terminology by default.
+# Stale files no longer listed here are removed when
+# `run_apache_httpd_vhosts_delete_unmanaged` is `true` (the default).
+#
+# On non-Debian platforms where these directories do not exist by default, the
+# role creates them and adds the necessary `IncludeOptional` directive to the
+# managed main configuration file.
 #
 # Example:
 #
@@ -176,6 +186,13 @@ run_apache_httpd_main_config_baseline_manage: true
 #               Require all granted
 #           </Directory>
 #       </VirtualHost>
+#   - name: "api_backend"
+#     enabled: true
+#     content: |
+#       <VirtualHost *:443>
+#           ServerName api.example.com
+#           [...]
+#       </VirtualHost>
 # ```
 #
 # - Type: list
@@ -186,8 +203,8 @@ run_apache_httpd_vhosts_config: []
 # Controls whether the role removes stale VirtualHost files that are not
 # declared in `run_apache_httpd_vhosts_config`.
 #
-# When set to `true`, any `*.conf` file or symlink found in `sites-available/`
-# or `sites-enabled/` whose name does not match an entry in
+# When set to `true`, any `*.conf` file or symlink found in the available and
+# enabled directories whose name does not match an entry in
 # `run_apache_httpd_vhosts_config` is deleted. This keeps the managed
 # directories in sync with the declared list, treating
 # `run_apache_httpd_vhosts_config` as the single source of truth.
@@ -203,8 +220,7 @@ run_apache_httpd_vhosts_delete_unmanaged: true
 
 # Controls whether the role ships and manages its curated Apache config snippets
 # (reusable, centrally maintained config blocks meant to be pulled into
-# `<VirtualHost>` / `<Directory>` blocks via
-# `Include snippets/<context>/<name>.conf`).
+# VirtualHost or Directory contexts via `Include snippets/<name>.conf`).
 #
 # When set to `true`, the role ensures the snippet directories
 # (`snippets/global/`, `snippets/vhost/`, `snippets/directory/`) exist and
@@ -289,13 +305,15 @@ run_apache_httpd_snippet_settings: {}
 # Only modules known to the platform-specific
 # `__run_apache_httpd_modules_map_resources` mapping (see `vars/main.yml` and
 # the platform overrides in `vars/debian.yml`, `vars/redhat.yml`,
-# `vars/suse.yml`) are managed by this role. Modules not present in that
-# mapping are silently skipped; if you need to enable such a module, add the
-# necessary `LoadModule` configuration via your own tasks on top of this role.
+# `vars/suse.yml`) are managed by this role. Modules not present in that mapping
+# are silently skipped; if you need to enable such a module, add the necessary
+# `LoadModule` configuration via your own tasks on top of this role.
 #
 # For each listed and known module, the role installs required distribution
-# packages automatically and enables the module using the platform's native
-# mechanism.
+# packages automatically. On Debian, it creates symlinks from `mods-available/`
+# to `mods-enabled/`. On Red Hat, it ensures the package-provided config files
+# in `conf.modules.d/` are present. On SUSE, it adds the module to the
+# `APACHE_MODULES` sysconfig variable.
 #
 # - Type: list
 # - Required: No
@@ -306,10 +324,11 @@ run_apache_httpd_modules_enabled: []
 # `run_apache_httpd_modules_enabled`.
 #
 # When set to `true`, modules not listed in `run_apache_httpd_modules_enabled`
-# (and not part of the platform's essential baseline or the active MPM module)
-# are disabled using the platform's native mechanism. Platform-essential modules
-# (e.g., `authz_core`, `dir`, `mime` on Debian) and the MPM module matching
-# `run_apache_httpd_mpm` are always preserved.
+# are disabled. On Debian, symlinks in `mods-enabled/` are removed. On SUSE,
+# modules are removed from the `APACHE_MODULES` sysconfig variable. On Red Hat,
+# package-provided config files in `conf.modules.d/` are left in place (as they
+# are managed by the package manager), but any role-created overrides are
+# cleaned up.
 #
 # When set to `false`, unknown modules are left untouched. Use this if you
 # manage additional modules outside of this role and want to prevent accidental
