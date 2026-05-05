@@ -1,11 +1,12 @@
 # Ansible role: `foundata.apache_httpd.run`
 
-The `foundata.apache_httpd.run` Ansible role (part of the `foundata.apache_httpd` Ansible collection).
+The `foundata.apache_httpd.run` Ansible role (part of the `foundata.apache_httpd` Ansible collection). It provides automated installation, configuration management, and hardening of [Apache HTTP Server](https://httpd.apache.org/) across major Linux distributions.
 
 
 
 ## Table of contents<a id="toc"></a>
 
+- [Features](#features)
 - [Example playbooks, using this role](#examples)
 - [Supported tags](#tags)<!-- ANSIBLE DOCSMITH TOC START -->
 - [Role variables](#variables)
@@ -47,6 +48,28 @@ The `foundata.apache_httpd.run` Ansible role (part of the `foundata.apache_httpd
 
 
 
+## Features<a id="features"></a>
+
+Main features:
+
+* **VirtualHost management** via `sites-available/` and `sites-enabled/` (Debian-style symlink pattern enforced on all platforms, including Red Hat and SUSE) with optional cleanup of unmanaged files.
+* **MPM selection:** choose between `event`, `worker`, and `prefork` via a single variable; the role handles the platform-specific mechanism (Debian: `mods-enabled/` symlinks, Red Hat: `conf.modules.d/00-mpm.conf`, SUSE: `APACHE_MPM` sysconfig variable).
+* **Module management:** enable modules by short name, the role installs packages and activates modules automatically with cross-platform support (Debian: symlinks, Red Hat: package-managed `conf.modules.d/` files, SUSE: `APACHE_MODULES` sysconfig variable).
+* Layered configuration merge: production-ready internal defaults (see [`__run_apache_httpd_main_directives_defaults`](./vars/main.yml) for the complete list) and user settings are combined automatically. User-provided values always take precedence.
+* **Hardened TLS baseline** following the [Mozilla "Intermediate" TLS profile (Guideline v6.0)](https://ssl-config.mozilla.org/#server=apache&config=intermediate&hsts=1&ocsp=1&guideline=6.0):
+  * Post-quantum key exchange (`X25519MLKEM768`) on platforms with OpenSSL >= 3.5, automatic fallback to classical curves on older platforms.
+  * Ships [RFC 7919](https://www.rfc-editor.org/rfc/rfc7919) ffdhe3072 DH parameters; no manual `openssl dhparam` step needed.
+  * OCSP stapling, session resumption, and ECDHE-only cipher suites out of the box.
+* **Reusable, curated config snippets** for common tasks, ready to `Include` in your VirtualHost configs:
+  * `global/tls-baseline.conf` -- TLS/SSL hardening (see above).
+  * `vhost/headers-security.conf` -- security headers (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`).
+  * `vhost/headers-hsts.conf` -- [HTTP Strict Transport Security](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security) with configurable `max-age`, `includeSubDomains`, and `preload`.
+  * `directory/cache-static.conf` -- long-lived caching for static assets (`Cache-Control: public, immutable`).
+  * `directory/php-fpm.conf` -- FastCGI proxy for PHP-FPM via `mod_proxy_fcgi` (Unix socket or TCP).
+* **Hardened catch-all `<VirtualHost>`** that denies all requests / rejects unknown TLS handshakes, preventing unintended content exposure for unknown hostnames.
+
+
+
 ## Example playbooks, using this role<a id="examples"></a>
 
 Installation with automatic upgrade:
@@ -66,6 +89,111 @@ Installation with automatic upgrade:
         run_apache_httpd_autoupgrade: true
 ```
 
+Installation with a TLS-enabled site, security headers, HSTS, and custom snippet settings:
+
+```yaml
+---
+
+- name: "Initialize the foundata.apache_httpd.run role"
+  hosts: localhost
+  gather_facts: false
+  tasks:
+
+    - name: "Trigger invocation of the foundata.apache_httpd.run role"
+      ansible.builtin.include_role:
+        name: "foundata.apache_httpd.run"
+      vars:
+        run_apache_httpd_autoupgrade: true
+        run_apache_httpd_snippet_settings:
+          hsts:
+            max_age: 63072000 # 2 years
+            include_subdomains: true
+            preload: true
+          tls-baseline:
+            resolvers:
+              - "127.0.0.1" # local resolver (e.g. unbound, systemd-resolved)
+        run_apache_httpd_modules_enabled:
+          - "ssl"
+          - "headers"
+          - "rewrite"
+          - "http2"
+        run_apache_httpd_vhosts_config:
+          - name: "example.com"
+            enabled: true
+            content: |
+              <VirtualHost *:80>
+                  ServerName example.com
+                  Redirect permanent / https://example.com/
+              </VirtualHost>
+              <VirtualHost *:443>
+                  ServerName example.com
+                  DocumentRoot /var/www/example.com
+
+                  SSLEngine on
+                  SSLCertificateFile /etc/letsencrypt/live/example.com/fullchain.pem
+                  SSLCertificateKeyFile /etc/letsencrypt/live/example.com/privkey.pem
+
+                  Include snippets/vhost/headers-security.conf
+                  Include snippets/vhost/headers-hsts.conf
+
+                  <Directory /var/www/example.com>
+                      Require all granted
+                      Include snippets/directory/cache-static.conf
+                  </Directory>
+              </VirtualHost>
+```
+
+Installation with PHP-FPM (TCP backend) and custom main config directives:
+
+```yaml
+---
+
+- name: "Initialize the foundata.apache_httpd.run role"
+  hosts: localhost
+  gather_facts: false
+  tasks:
+
+    - name: "Trigger invocation of the foundata.apache_httpd.run role"
+      ansible.builtin.include_role:
+        name: "foundata.apache_httpd.run"
+      vars:
+        run_apache_httpd_snippet_settings:
+          php-fpm:
+            type: "tcp"
+            tcp_host: "127.0.0.1"
+            tcp_port: 9000
+        run_apache_httpd_main_config_block: |
+          Timeout 120
+          MaxKeepAliveRequests 200
+        run_apache_httpd_modules_enabled:
+          - "ssl"
+          - "headers"
+          - "rewrite"
+          - "proxy"
+          - "proxy_fcgi"
+        run_apache_httpd_vhosts_config:
+          - name: "app.example.com"
+            enabled: true
+            content: |
+              <VirtualHost *:443>
+                  ServerName app.example.com
+
+                  SSLEngine on
+                  SSLCertificateFile /etc/letsencrypt/live/app.example.com/fullchain.pem
+                  SSLCertificateKeyFile /etc/letsencrypt/live/app.example.com/privkey.pem
+
+                  Include snippets/vhost/headers-security.conf
+
+                  DocumentRoot /var/www/app
+                  DirectoryIndex index.php index.html
+
+                  <Directory /var/www/app>
+                      Require all granted
+                      Include snippets/directory/php-fpm.conf
+                  </Directory>
+              </VirtualHost>
+```
+
 Uninstall:
 
 ```yaml
@@ -81,6 +209,18 @@ Uninstall:
         name: "foundata.apache_httpd.run"
       vars:
         run_apache_httpd_state: "absent"
+```
+
+On SELinux-enabled systems (RHEL, Fedora, AlmaLinux, CentOS Stream), Apache may need additional permissions for network connections (e.g. reverse proxying to upstream backends). Add this to your playbook before including the role:
+
+```yaml
+- name: "Allow Apache to make network connections (SELinux)"
+  ansible.posix.seboolean:
+    name: "httpd_can_network_connect"
+    state: true
+    persistent: true
+  when:
+    - ansible_facts['selinux']['status'] | default('disabled') == 'enabled'
 ```
 
 
