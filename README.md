@@ -2,7 +2,7 @@
 
 This repository contains the `foundata.apache_httpd` Ansible Collection.
 
-It provides resources to manage and use the [Apache HTTP server](https://httpd.apache.org/)
+It provides resources to manage and use the [Apache HTTP server](https://httpd.apache.org/), a HTTP web server, reverse proxy, load balancer.
 
 
 <div align="center" id="project-readme-header">
