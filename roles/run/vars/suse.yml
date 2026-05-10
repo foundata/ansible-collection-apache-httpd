@@ -75,7 +75,7 @@ __run_apache_httpd_modules_essential:
 __run_apache_httpd_snakeoil_cert_path: "/etc/apache2/ssl.crt/snakeoil.pem"
 __run_apache_httpd_snakeoil_key_path: "/etc/apache2/ssl.key/snakeoil.key"
 
-# # Diffie-Hellman(DH) parameters file. Paths follow SUSE's /etc/apache2/ssl.*/ convention.
+# Diffie-Hellman(DH) parameters file. Paths follow SUSE's /etc/apache2/ssl.*/ convention.
 __run_apache_httpd_dhparam_ffdhe3072_path: "/etc/apache2/ssl.prm/dhparam_ffdhe3072.pem"
 
 # Log directory.
