@@ -36,7 +36,6 @@ __run_apache_httpd_config_service_dropin_modules_enabled_dir_path: "{{ __run_apa
 __run_apache_httpd_config_service_dropin_snippets_dir_path: "{{ __run_apache_httpd_server_root }}/snippets"
 __run_apache_httpd_config_service_ports_file_path: "{{ __run_apache_httpd_server_root }}/conf/ports.conf"
 
-
 # Daemon service name.
 __run_apache_httpd_apache_httpd_servicename: "httpd.service"
 
@@ -53,6 +52,9 @@ __run_apache_httpd_service_group: "apache"
 __run_apache_httpd_snakeoil_cert_path: "/etc/pki/tls/certs/localhost.crt"
 __run_apache_httpd_snakeoil_key_path: "/etc/pki/tls/private/localhost.key"
 
+# Diffie-Hellman(DH) parameters file
+__run_apache_httpd_dhparam_ffdhe3072_path: "/etc/pki/tls/certs/dhparam_ffdhe3072.pem"
+
 # Log directory.
 __run_apache_httpd_log_dir_path: "/var/log/httpd"
 __run_apache_httpd_log_access_path: "/var/log/httpd/access_log"
@@ -63,7 +65,7 @@ __run_apache_httpd_log_error_path: "/var/log/httpd/error_log"
 # /run/httpd/ for runtime state.
 __run_apache_httpd_snippet_settings_overwrite:
   tls-baseline:
-    dhparam_path: "/etc/pki/tls/certs/dhparam_ffdhe3072.pem"
+    dhparam_path: "{{ __run_apache_httpd_dhparam_ffdhe3072_path }}"
     ssl_session_cache: "shmcb:/run/httpd/ssl_scache(10485760)"
 
 
