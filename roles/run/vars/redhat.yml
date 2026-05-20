@@ -12,15 +12,12 @@ __run_apache_httpd_packages_install:
 
 
 # Neutralize distribution config files that conflict with the role's managed
-# config. These are RPM %config(noreplace) conffiles: deleting them would cause
-# RPM to reinstall them on the next package update. Overwriting with a managed
-# comment keeps them "modified" so RPM preserves them (saving new versions as
-# .rpmnew instead).
+# config:
 # - ssl.conf: contains "Listen 443" which duplicates ports.conf
 # - welcome.conf: default welcome page that interferes with VHost routing
 __run_apache_httpd_paths_neutralize:
-  - "/etc/httpd/conf.d/ssl.conf"
-  - "/etc/httpd/conf.d/welcome.conf"
+  "/etc/httpd/conf.d/ssl.conf": "#"
+  "/etc/httpd/conf.d/welcome.conf": "#"
 
 # ServerRoot. RedHat uses /etc/httpd/ as config root.
 __run_apache_httpd_server_root: "/etc/httpd"
