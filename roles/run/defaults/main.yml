@@ -111,7 +111,7 @@ run_apache_httpd_vhosts_default_manage: true
 #
 # - Type: str
 # - Required: No
-# - Default: 
+# - Default:
 run_apache_httpd_main_config_block: ""
 
 # Controls whether the role injects curated baseline directives into the main

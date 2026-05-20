@@ -531,7 +531,10 @@
     - name: "Config | Default | Delete stale / unmanaged module configs (symlink type)"
       when:
         - run_apache_httpd_modules_disable_unmanaged
-        - (__run_apache_httpd_module_conf_entries | ansible.builtin.selectattr('type', 'equalto', 'symlink') | ansible.builtin.list | ansible.builtin.length) > 0
+        - (__run_apache_httpd_module_conf_entries
+           | ansible.builtin.selectattr('type', 'equalto', 'symlink')
+           | ansible.builtin.list
+           | ansible.builtin.length) > 0
       block:
 
         - name: "Config | Default | Build list of expected module config filenames (symlink type)"
