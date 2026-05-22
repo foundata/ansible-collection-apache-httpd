@@ -100,7 +100,7 @@
       {% endif %}
     owner: "root"
     group: "root"
-    mode: "0644"
+    mode: "u=rw,g=r,o=r" # 0644
   when:
     - __run_apache_httpd_paths_neutralize is ansible.builtin.defined
     - (__run_apache_httpd_paths_neutralize | ansible.builtin.length) > 0

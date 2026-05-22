@@ -100,13 +100,12 @@ __run_apache_httpd_packages_removal: []
 __run_apache_httpd_paths_removal: []
 
 
-# Dictionary of configuration files that conflict with this role's managed configuration
-# and should be neutralized by overwriting them with a harmless managed comment
-# instead of removing them. Keys are file paths; values are the single-line
-# comment characters to use. Some package managers restore missing files during
-# upgrades but preserve locally modified ones; for example, RPM %config(noreplace)
-# files may be reinstalled if deleted, while new versions of modified files are
-# saved separately as ".rpmnew".
+# Dictionary of files to be overwritten with a managed comment instead of being
+# deleted. Keys are file paths; values are the single-line comment characters to
+# use. This is needed on platforms where the package manager reinstalls deleted
+# files on package update. Restored files would conflict with the managed
+# configuration, while modified files are preserved. For example, RPM with
+# %config(noreplace) restores missing files but preserves modified ones.
 __run_apache_httpd_paths_neutralize: {}
 
 
