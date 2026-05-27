@@ -9,31 +9,19 @@
 
 ## Preparation
 
-- name: "Molecule | Verify | Set run_apache_httpd_* parameters as facts from __testing_state"
+- name: "Molecule | Verify | Set run_apache_httpd_* and __testing_* parameters as facts from __testing_state"
   ansible.builtin.set_fact:
     "{{ item['key'] }}": "{{ item['value'] }}"
   loop: >-
     {{
       (__testing_state | default({}, true))
       | ansible.builtin.dict2items
-      | ansible.builtin.selectattr('key', 'match', '^run_apache_httpd_')
+      | ansible.builtin.selectattr('key', 'match', '^(run_apache_httpd_|__testing_)')
       | ansible.builtin.list
     }}
 
 
-- name: "Molecule | Verify | Set __testing_* parameters as facts from __testing_state"
-  ansible.builtin.set_fact:
-    "{{ item['key'] }}": "{{ item['value'] }}"
-  loop: >-
-    {{
-      (__testing_state | default({}, true))
-      | ansible.builtin.dict2items
-      | ansible.builtin.selectattr('key', 'match', '^__testing_')
-      | ansible.builtin.list
-    }}
-
-
-## Main configuration file existence
+## Main configuration file
 
 - name: "Molecule | Verify | Check if Apache HTTPD main configuration file exists"
   ansible.builtin.stat:
@@ -53,7 +41,7 @@
       exists.
 
 
-## Distribution backup file existence and content
+## Distribution backup file
 
 - name: "Molecule | Verify | Check if Apache HTTPD distribution backup configuration file exists"
   ansible.builtin.stat:
