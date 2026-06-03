@@ -614,12 +614,12 @@
       The Cache-Control header for static assets contains 'public' and 'immutable'.
 
 
-## Regression tests: init-only merged variable evaluation
+## Init-only merged variable evaluation
 #
 # Re-run the role's init with controlled inputs and assert the merged variables
-# directly (whether materialized eagerly in tasks/init.yml or lazily in
-# vars/main.yml): user/platform overrides must win, untouched defaults must
-# survive, and the module list must include the MPM module and stay unique.
+# directly (whether materialized in tasks/init.yml or lazily in vars/main.yml):
+# user/platform overrides must win, untouched defaults must survive, and the
+# module list must include the MPM module and stay unique.
 #
 # Inputs are set via set_fact so they outrank the converge-time facts restored
 # at the top of this file and stay in scope when the assertions dereference the
