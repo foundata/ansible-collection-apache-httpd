@@ -642,11 +642,13 @@
         __run_apache_httpd_main_directives_overwrite:
           ServerTokens: "Full"
 
+
     - name: "Molecule | Verify | Re-initialize apache_httpd with controlled inputs"
       ansible.builtin.include_role:
         name: "foundata.apache_httpd.run"
         tasks_from: "init"
         public: true
+
 
     - name: "Molecule | Verify | Assert effective main directives merged correctly"
       ansible.builtin.assert:
@@ -657,6 +659,7 @@
           - __run_apache_httpd_effective_main_directives['Timeout'] == 300
         fail_msg: "__run_apache_httpd_effective_main_directives did not merge defaults and overrides as expected."
         success_msg: "__run_apache_httpd_effective_main_directives merged defaults and overrides correctly."
+
 
     - name: "Molecule | Verify | Assert effective snippet settings merged correctly"
       ansible.builtin.assert:
@@ -669,6 +672,7 @@
           - __run_apache_httpd_effective_snippet_settings['php-fpm']['tcp_port'] == 9000
         fail_msg: "__run_apache_httpd_effective_snippet_settings did not merge defaults, platform overrides and user settings as expected."
         success_msg: "__run_apache_httpd_effective_snippet_settings merged defaults, platform overrides and user settings correctly."
+
 
     - name: "Molecule | Verify | Assert effective modules list merged correctly"
       ansible.builtin.assert:
