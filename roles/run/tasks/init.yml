@@ -127,28 +127,17 @@
   loop: "{{ __run_apache_httpd_platform_filenames_most_specific_last }}"
 
 
-## Apache HTTPD specific
+## apache_httpd specific
 
 
-# __run_apache_httpd_effective_main_directives is computed lazily in
-# vars/main.yml (defaults merged with the platform overrides).
-- name: "Init | Show effective Apache HTTPD main configuration directives"
+- name: "Init | Show effective merged variables (computed lazily in vars/main.yml)"
   ansible.builtin.debug:
-    var: __run_apache_httpd_effective_main_directives
+    msg: "{{ __run_apache_httpd_effective_var }} = {{ lookup('ansible.builtin.vars', __run_apache_httpd_effective_var) }}"
     verbosity: 3
-
-
-# __run_apache_httpd_effective_snippet_settings is computed lazily in
-# vars/main.yml (defaults, platform overrides, then user settings).
-- name: "Init | Show effective snippet settings"
-  ansible.builtin.debug:
-    var: __run_apache_httpd_effective_snippet_settings
-    verbosity: 3
-
-
-# __run_apache_httpd_effective_modules_enabled is computed lazily in
-# vars/main.yml (essential modules + selected MPM + user modules, deduplicated).
-- name: "Init | Show effective list of enabled modules"
-  ansible.builtin.debug:
-    var: __run_apache_httpd_effective_modules_enabled
-    verbosity: 3
+  loop:
+    - "__run_apache_httpd_effective_main_directives"
+    - "__run_apache_httpd_effective_snippet_settings"
+    - "__run_apache_httpd_effective_modules_enabled"
+  loop_control:
+    loop_var: "__run_apache_httpd_effective_var"
+    label: "{{ __run_apache_httpd_effective_var }}"
