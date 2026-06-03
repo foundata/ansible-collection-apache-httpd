@@ -130,51 +130,24 @@
 ## Apache HTTPD specific
 
 
-- name: "Init | Merge Apache HTTPD main configuration directives (defaults, platform overrides)"
-  ansible.builtin.set_fact:
-    __run_apache_httpd_effective_main_directives: >-
-      {{
-        __run_apache_httpd_main_directives_defaults
-        | ansible.builtin.combine(__run_apache_httpd_main_directives_overwrite, recursive=true)
-      }}
-
-
+# __run_apache_httpd_effective_main_directives is computed lazily in
+# vars/main.yml (defaults merged with the platform overrides).
 - name: "Init | Show effective Apache HTTPD main configuration directives"
   ansible.builtin.debug:
     var: __run_apache_httpd_effective_main_directives
     verbosity: 3
 
 
-- name: "Init | Merge snippet settings (defaults, platform overrides, user)"
-  ansible.builtin.set_fact:
-    __run_apache_httpd_effective_snippet_settings: >-
-      {{
-        __run_apache_httpd_snippet_settings_defaults
-        | ansible.builtin.combine(__run_apache_httpd_snippet_settings_overwrite, recursive=true)
-        | ansible.builtin.combine(run_apache_httpd_snippet_settings, recursive=true)
-      }}
-
-
+# __run_apache_httpd_effective_snippet_settings is computed lazily in
+# vars/main.yml (defaults, platform overrides, then user settings).
 - name: "Init | Show effective snippet settings"
   ansible.builtin.debug:
     var: __run_apache_httpd_effective_snippet_settings
     verbosity: 3
 
 
-- name: "Init | Compute effective list of enabled modules (essential + MPM + user)"
-  ansible.builtin.set_fact:
-    __run_apache_httpd_effective_modules_enabled: >-
-      {{
-        (
-          (__run_apache_httpd_modules_essential | ansible.builtin.default([]))
-          + ['mpm_' ~ run_apache_httpd_mpm]
-          + (run_apache_httpd_modules_enabled | ansible.builtin.default([]))
-        )
-        | ansible.builtin.unique
-        | ansible.builtin.list
-      }}
-
-
+# __run_apache_httpd_effective_modules_enabled is computed lazily in
+# vars/main.yml (essential modules + selected MPM + user modules, deduplicated).
 - name: "Init | Show effective list of enabled modules"
   ansible.builtin.debug:
     var: __run_apache_httpd_effective_modules_enabled

@@ -233,6 +233,23 @@ __run_apache_httpd_modules_map_resources: {}
 # automatically and does not need to appear here.
 __run_apache_httpd_modules_essential: []
 
+# Effective list of enabled modules: the platform's essential modules, the
+# selected MPM module (mpm_<run_apache_httpd_mpm>), and the user-requested
+# run_apache_httpd_modules_enabled, deduplicated.
+#
+# Lazy / late-bound evaluation: Jinja renders this variable on access,
+# after tasks/init.yml loads the platform vars file that sets the inputs.
+__run_apache_httpd_effective_modules_enabled: >-
+  {{
+    (
+      (__run_apache_httpd_modules_essential | ansible.builtin.default([]))
+      + ['mpm_' ~ run_apache_httpd_mpm]
+      + (run_apache_httpd_modules_enabled | ansible.builtin.default([]))
+    )
+    | ansible.builtin.unique
+    | ansible.builtin.list
+  }}
+
 
 # Internal defaults for snippet template variables. Platform-specific overrides
 # are defined in __run_apache_httpd_snippet_settings_overwrite. User overrides
@@ -281,6 +298,18 @@ __run_apache_httpd_snippet_settings_defaults:
 # Populated by platform-specific vars files.
 __run_apache_httpd_snippet_settings_overwrite: {}
 
+# Effective snippet settings: defaults, then platform overrides, then the
+# user-supplied run_apache_httpd_snippet_settings (highest priority), deep-merged.
+#
+# Lazy / late-bound evaluation: Jinja renders this variable on access,
+# after tasks/init.yml loads the platform vars file that sets the inputs.
+__run_apache_httpd_effective_snippet_settings: >-
+  {{
+    __run_apache_httpd_snippet_settings_defaults
+    | ansible.builtin.combine(__run_apache_httpd_snippet_settings_overwrite, recursive=true)
+    | ansible.builtin.combine(run_apache_httpd_snippet_settings, recursive=true)
+  }}
+
 
 # Default baseline directives for the main config. These are security-oriented
 # sane defaults that the role injects when run_apache_httpd_main_config_baseline_manage
@@ -305,6 +334,17 @@ __run_apache_httpd_main_directives_defaults:
 # on top of __run_apache_httpd_main_directives_defaults via combine(recursive=true).
 # Populated by platform-specific vars files.
 __run_apache_httpd_main_directives_overwrite: {}
+
+# Effective main baseline directives: the defaults deep-merged with the
+# platform-specific overrides.
+#
+# Lazy / late-bound evaluation: Jinja renders this variable on access,
+# after tasks/init.yml loads the platform vars file that sets the inputs.
+__run_apache_httpd_effective_main_directives: >-
+  {{
+    __run_apache_httpd_main_directives_defaults
+    | ansible.builtin.combine(__run_apache_httpd_main_directives_overwrite, recursive=true)
+  }}
 
 # Service user and group (the user/group Apache runs as).
 __run_apache_httpd_service_user: "www-data"
