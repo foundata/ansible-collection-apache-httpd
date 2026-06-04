@@ -666,12 +666,22 @@
         that:
           # user setting wins (highest priority)
           - __run_apache_httpd_effective_snippet_settings['hsts']['max_age'] == 1234
-          # platform overwrite (RedHat family) is present
-          - __run_apache_httpd_effective_snippet_settings['tls-baseline']['ssl_session_cache'] == "shmcb:/run/httpd/ssl_scache(10485760)"
           # an untouched default survives
           - __run_apache_httpd_effective_snippet_settings['php-fpm']['tcp_port'] == 9000
-        fail_msg: "__run_apache_httpd_effective_snippet_settings did not merge defaults, platform overrides and user settings as expected."
-        success_msg: "__run_apache_httpd_effective_snippet_settings merged defaults, platform overrides and user settings correctly."
+        fail_msg: "__run_apache_httpd_effective_snippet_settings did not merge defaults and user settings as expected."
+        success_msg: "__run_apache_httpd_effective_snippet_settings merged defaults and user settings correctly."
+
+    - name: "Molecule | Verify | Assert RedHat-family platform overwrite is present in snippet settings"
+      ansible.builtin.assert:
+        that:
+          # ssl_session_cache is set only by the RedHat-family platform overwrite
+          # (vars/redhat.yml); other families set different values, so this check
+          # is gated to the RedHat family.
+          - __run_apache_httpd_effective_snippet_settings['tls-baseline']['ssl_session_cache'] == "shmcb:/run/httpd/ssl_scache(10485760)"
+        fail_msg: "__run_apache_httpd_effective_snippet_settings did not include the RedHat-family platform overwrite."
+        success_msg: "__run_apache_httpd_effective_snippet_settings includes the RedHat-family platform overwrite."
+      when:
+        - ansible_facts['os_family'] == "RedHat"
 
 
     - name: "Molecule | Verify | Assert effective modules list merged correctly"
