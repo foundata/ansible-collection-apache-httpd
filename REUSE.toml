@@ -1,6 +1,6 @@
 version = 1
 SPDX-PackageName = "Ansible collection: foundata.apache_httpd"
-SPDX-PackageDownloadLocation = "https://github.com/foundata/ansible-collection-apache-httpd"
+SPDX-PackageDownloadLocation = "https://foundata.com/en/projects/ansible-collection-apache-httpd/#releases"
 SPDX-PackageSupplier = "foundata GmbH"
 SPDX-PackageComment = """
 This project may include calls to Application Programming Interfaces
