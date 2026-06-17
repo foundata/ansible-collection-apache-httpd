@@ -1,0 +1,9 @@
+---
+
+bugfixes:
+  - >
+    ``run`` role - Stale enabled-vhost symlinks are now reaped. The
+    unmanaged-vhost cleanup used ``find`` with ``file_type: "file"``, which
+    skipped the symlinks in the vhosts-enabled directory; removing a vhost from
+    ``run_apache_httpd_vhosts_config`` could leave the old enabled vhost active.
+    The cleanup now matches symlinks too.
