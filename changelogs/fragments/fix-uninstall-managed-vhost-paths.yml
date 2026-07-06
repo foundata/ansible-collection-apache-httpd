@@ -1,0 +1,10 @@
+---
+
+bugfixes:
+  - >
+    ``run`` role - Uninstall (``run_apache_httpd_state: absent``) now removes
+    managed vhost configs by absolute path from both the vhosts-available and
+    vhosts-enabled directories. The removal list was built from bare filenames
+    (e.g. ``example.com.conf``) that did not resolve, so on Debian/SUSE — where
+    the vhost directories are intentionally kept — managed vhost files and their
+    enabled symlinks were left behind after uninstall.

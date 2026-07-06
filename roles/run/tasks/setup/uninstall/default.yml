@@ -21,25 +21,25 @@
     path: "{{ item }}"
     state: "absent"
   vars:
+    __run_apache_httpd_managed_vhost_filenames: >-
+      {{
+        (run_apache_httpd_vhosts_config | ansible.builtin.default([]))
+        | ansible.builtin.map(attribute='name')
+        | ansible.builtin.map('ansible.builtin.regex_replace', '$', '.conf')
+        | ansible.builtin.list
+      }}
     __run_apache_httpd_paths_to_remove: >-
       {{
         (
           (
-            (run_apache_httpd_vhosts_config | default([]))
-            | ansible.builtin.map(attribute='name')
-            | ansible.builtin.map('ansible.builtin.regex_replace', '$', '.conf')
+            __run_apache_httpd_managed_vhost_filenames
+            | ansible.builtin.map('ansible.builtin.regex_replace', '^', __run_apache_httpd_config_service_dropin_vhosts_available_dir_path ~ '/')
             | ansible.builtin.list
           )
           +
           (
-            (
-                query('ansible.builtin.fileglob', 'templates/snippets/*.conf.j2')
-              + query('ansible.builtin.fileglob', 'templates/snippets/global/*.conf.j2')
-              + query('ansible.builtin.fileglob', 'templates/snippets/directory/*.conf.j2')
-              + query('ansible.builtin.fileglob', 'templates/snippets/vhost/*.conf.j2')
-            )
-            | ansible.builtin.map('ansible.builtin.basename')
-            | ansible.builtin.map('ansible.builtin.regex_replace', '\.j2$', '')
+            __run_apache_httpd_managed_vhost_filenames
+            | ansible.builtin.map('ansible.builtin.regex_replace', '^', __run_apache_httpd_config_service_dropin_vhosts_enabled_dir_path ~ '/')
             | ansible.builtin.list
           )
           +

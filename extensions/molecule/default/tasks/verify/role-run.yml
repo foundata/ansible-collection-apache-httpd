@@ -694,3 +694,59 @@
             == (__run_apache_httpd_effective_modules_enabled | ansible.builtin.length)
         fail_msg: "__run_apache_httpd_effective_modules_enabled did not include the MPM/user modules or contained duplicates."
         success_msg: "__run_apache_httpd_effective_modules_enabled includes the MPM and user modules and is unique."
+
+
+## Regression: uninstall removes managed vhost files/symlinks by absolute path
+#
+# This block runs LAST because it uninstalls the role. It guards the uninstall
+# path-join fix: managed vhost configs were removed by bare filename (e.g.
+# "example.com.conf"), which did not resolve, so they survived on Debian/SUSE
+# where the vhost directories are kept. A managed vhost file in vhosts-available
+# and its vhosts-enabled symlink must exist after converge and be gone after a
+# run_apache_httpd_state: absent run.
+
+- name: "Molecule | Verify | Validate uninstall removes managed vhost files (integration)"
+  vars:
+    __testing_uninstall_vhost_available: "{{ __run_apache_httpd_config_service_dropin_vhosts_available_dir_path }}/example.com.conf"
+    __testing_uninstall_vhost_enabled: "{{ __run_apache_httpd_config_service_dropin_vhosts_enabled_dir_path }}/example.com.conf"
+  block:
+
+    - name: "Molecule | Verify | Stat managed vhost file and symlink before uninstall"
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: __testing_uninstall_before
+      loop:
+        - "{{ __testing_uninstall_vhost_available }}"
+        - "{{ __testing_uninstall_vhost_enabled }}"
+
+    - name: "Molecule | Verify | Assert managed vhost file and symlink exist before uninstall"
+      ansible.builtin.assert:
+        that:
+          - __testing_uninstall_before['results'][0]['stat']['exists']
+          - __testing_uninstall_before['results'][1]['stat']['exists']
+        fail_msg: "Managed vhost file/symlink missing before uninstall; test setup invalid."
+        success_msg: "Managed vhost file and enabled symlink exist before uninstall."
+
+    - name: "Molecule | Verify | Uninstall the role (run_apache_httpd_state: absent)"
+      ansible.builtin.include_role:
+        name: "foundata.apache_httpd.run"
+      vars:
+        run_apache_httpd_state: "absent"
+
+    - name: "Molecule | Verify | Stat managed vhost file and symlink after uninstall"
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: __testing_uninstall_after
+      loop:
+        - "{{ __testing_uninstall_vhost_available }}"
+        - "{{ __testing_uninstall_vhost_enabled }}"
+
+    - name: "Molecule | Verify | Assert managed vhost file and symlink were removed by uninstall"
+      ansible.builtin.assert:
+        that:
+          - not __testing_uninstall_after['results'][0]['stat']['exists']
+          - not __testing_uninstall_after['results'][1]['stat']['exists']
+        fail_msg: >-
+          Uninstall left managed vhost files behind (available exists={{ __testing_uninstall_after['results'][0]['stat']['exists'] }},
+          enabled exists={{ __testing_uninstall_after['results'][1]['stat']['exists'] }}).
+        success_msg: "Uninstall removed the managed vhost file and its enabled symlink."
