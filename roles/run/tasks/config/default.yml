@@ -535,54 +535,72 @@
         - "run_apache_httpd: restart apache_httpd.service"
 
 
-    - name: "Config | Default | Delete stale / unmanaged module configs (symlink type)"
-      when:
-        - run_apache_httpd_modules_disable_unmanaged
-        - (__run_apache_httpd_module_conf_entries
-           | ansible.builtin.selectattr('type', 'equalto', 'symlink')
-           | ansible.builtin.list
-           | ansible.builtin.length) > 0
-      block:
+- name: "Config | Default | Delete stale role-managed module configs (symlink type)"
+  when:
+    - run_apache_httpd_modules_disable_unmanaged
+  block:
 
-        - name: "Config | Default | Build list of expected module config filenames (symlink type)"
-          ansible.builtin.set_fact:
-            __run_apache_httpd_expected_module_filenames: >-
-              {{
-                __run_apache_httpd_module_conf_entries
-                | ansible.builtin.selectattr('type', 'equalto', 'symlink')
-                | ansible.builtin.map(attribute='name')
-                | ansible.builtin.list
-              }}
+    - name: "Config | Default | Build the role-managed and currently-enabled module config filename sets (symlink type)"
+      ansible.builtin.set_fact:
+        # Every symlink-type module config filename the role could deploy (across
+        # all modules in the platform's module map), regardless of what is
+        # enabled now.
+        __run_apache_httpd_modules_managed_filenames: >-
+          {{
+            __run_apache_httpd_modules_map_resources.values()
+            | ansible.builtin.map(attribute='conf_files')
+            | ansible.builtin.flatten
+            | ansible.builtin.selectattr('type', 'equalto', 'symlink')
+            | ansible.builtin.map(attribute='name')
+            | ansible.builtin.unique
+            | ansible.builtin.list
+          }}
+        # The subset that should remain: symlink-type config filenames of the
+        # currently enabled modules.
+        __run_apache_httpd_modules_expected_filenames: >-
+          {{
+            (__run_apache_httpd_effective_modules_enabled | ansible.builtin.default([]))
+            | ansible.builtin.select('in', __run_apache_httpd_modules_map_resources.keys() | ansible.builtin.list)
+            | ansible.builtin.map('extract', __run_apache_httpd_modules_map_resources)
+            | ansible.builtin.map(attribute='conf_files')
+            | ansible.builtin.flatten
+            | ansible.builtin.selectattr('type', 'equalto', 'symlink')
+            | ansible.builtin.map(attribute='name')
+            | ansible.builtin.unique
+            | ansible.builtin.list
+          }}
 
 
-        - name: "Config | Default | List existing module config files in modules-enabled"
-          ansible.builtin.find:
-            paths:
-              - "{{ __run_apache_httpd_config_service_dropin_modules_enabled_dir_path }}"
-            patterns:
-              - "*.load"
-              - "*.conf"
-            file_type: "any"
-            hidden: true
-          register: __run_apache_httpd_module_conf_files
+    - name: "Config | Default | List existing module config files in modules-enabled"
+      ansible.builtin.find:
+        paths:
+          - "{{ __run_apache_httpd_config_service_dropin_modules_enabled_dir_path }}"
+        patterns:
+          - "*.load"
+          - "*.conf"
+        file_type: "any"
+        hidden: true
+      register: __run_apache_httpd_module_conf_files
 
 
-        - name: "Config | Default | Remove stale, unmanaged module configs (not in run_apache_httpd_modules_enabled)"
-          ansible.builtin.file:
-            path: "{{ item['path'] }}"
-            state: "absent"
-          when:
-            - (__run_apache_httpd_module_conf_files['files'] | ansible.builtin.length) > 0
-          loop: >-
-            {{
-              __run_apache_httpd_module_conf_files['files']
-              | ansible.builtin.rejectattr('path', 'search', '/(' ~ (__run_apache_httpd_expected_module_filenames
-                                                                     | ansible.builtin.map('ansible.builtin.regex_escape')
-                                                                     | ansible.builtin.join('|')) ~ ')$')
-              | ansible.builtin.list
-            }}
-          loop_control:
-            label: "{{ item['path'] }}"
-          notify:
-            - "run_apache_httpd: validate configuration"
-            - "run_apache_httpd: restart apache_httpd.service"
+    - name: "Config | Default | Remove stale role-managed module configs (in the role's map, not currently enabled)"
+      ansible.builtin.file:
+        path: "{{ item['path'] }}"
+        state: "absent"
+      loop: >-
+        {{
+          __run_apache_httpd_module_conf_files['files']
+          | ansible.builtin.rejectattr('isdir')
+          | ansible.builtin.selectattr('path', 'search', '/(' ~ (__run_apache_httpd_modules_managed_filenames
+                                                                 | ansible.builtin.map('ansible.builtin.regex_escape')
+                                                                 | ansible.builtin.join('|')) ~ ')$')
+          | ansible.builtin.rejectattr('path', 'search', '/(' ~ (__run_apache_httpd_modules_expected_filenames
+                                                                 | ansible.builtin.map('ansible.builtin.regex_escape')
+                                                                 | ansible.builtin.join('|')) ~ ')$')
+          | ansible.builtin.list
+        }}
+      loop_control:
+        label: "{{ item['path'] }}"
+      notify:
+        - "run_apache_httpd: validate configuration"
+        - "run_apache_httpd: restart apache_httpd.service"
