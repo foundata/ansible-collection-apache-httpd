@@ -111,7 +111,7 @@ run_apache_httpd_vhosts_default_manage: true
 #
 # - Type: str
 # - Required: No
-# - Default:
+# - Default: ""
 run_apache_httpd_main_config_block: ""
 
 # Controls whether the role injects curated baseline directives into the main
@@ -128,10 +128,10 @@ run_apache_httpd_main_config_block: ""
 # injected and you will likely need to provide essential directives yourself via
 # `run_apache_httpd_main_config_block` to get a working service.
 #
-# When `true`, the baseline also includes `Listen 80` and a conditional `Listen
-# 443` (active when the `ssl` module is enabled). If you need custom listen
-# ports, provide them via `run_apache_httpd_main_config_block` and set this to
-# `false`, or add additional `Listen` directives alongside the baseline.
+# When `true`, the baseline also includes `Listen 80` and a conditional
+# `Listen 443` (active when the `ssl` module is enabled). If you need custom
+# listen ports, provide them via `run_apache_httpd_main_config_block` and set
+# this to `false`, or add additional `Listen` directives alongside the baseline.
 #
 # - Type: bool
 # - Required: No
@@ -198,6 +198,36 @@ run_apache_httpd_main_config_baseline_manage: true
 # - Type: list
 # - Required: No
 # - Default: []
+# - Dict attributes:
+#   - name:
+#     Identifier used to build the config filename (`<name>.conf`) below the
+#     available and enabled directories. Must be unique within
+#     `run_apache_httpd_vhosts_config`.
+#
+#     Allowed characters: `a-z`, `A-Z`, `0-9`, dot (`.`), underscore (`_`), and
+#     hyphen (`-`). Any other character causes the role to fail with a
+#     validation error.
+#     - Type: str
+#     - Required: No
+#   - enabled: Controls whether the VirtualHost is active.
+#
+#     When `true`, a symlink is created in the enabled directory pointing to the
+#     corresponding file in the available directory, so Apache includes it. When
+#     `false`, the symlink is removed while the file in the available directory
+#     is kept in place, allowing the VirtualHost to be disabled without losing
+#     its configuration.
+#     - Type: bool
+#     - Required: No
+#     - Default: false
+#   - content:
+#     Raw Apache configuration for the VirtualHost, inserted verbatim into the
+#     rendered file. Typically contains one or more `<VirtualHost>` blocks, and
+#     optionally supporting directives.
+#
+#     Snippets provided by this role can be pulled in with
+#     `Include snippets/<context>/<name>.conf` as needed.
+#     - Type: str
+#     - Required: No
 run_apache_httpd_vhosts_config: []
 
 # Controls whether the role removes stale VirtualHost files that are not
@@ -282,6 +312,103 @@ run_apache_httpd_snippets_delete_unmanaged: false
 # - Type: dict
 # - Required: No
 # - Default: {}
+# - Dict attributes:
+#   - hsts: Settings for the `vhost/headers-hsts.conf` snippet that renders the
+#     `Strict-Transport-Security` HTTP response header.
+#     - Type: dict
+#     - Required: No
+#     - Dict attributes:
+#       - max_age:
+#         Duration in seconds that the browser should remember to only access
+#         the site via HTTPS. The default of 31536000 corresponds to one year,
+#         which is the minimum recommended by https://hstspreload.org/.
+#         - Type: int
+#         - Required: No
+#         - Default: 31536000
+#       - include_subdomains:
+#         Whether to extend the HSTS policy to all subdomains of the current
+#         domain. Required for HSTS preload list submission.
+#         - Type: bool
+#         - Required: No
+#         - Default: true
+#       - preload:
+#         Whether to add the `preload` directive, signalling to browser vendors
+#         that the domain should be included in the HSTS Preload List (hardcoded
+#         into browsers). This is practically irreversible; removal takes
+#         months.
+#         - Type: bool
+#         - Required: No
+#         - Default: false
+#   - php-fpm:
+#     Settings for the `directory/php-fpm.conf` snippet that configures FastCGI
+#     proxying to a PHP-FPM backend. The snippet renders a `<FilesMatch>` block
+#     with the appropriate `SetHandler` directive for `proxy:fcgi://` or
+#     `proxy:unix:`.
+#     - Type: dict
+#     - Required: No
+#     - Dict attributes:
+#       - type:
+#         Connection method to the PHP-FPM backend. `socket` connects via a Unix
+#         domain socket (lower overhead, same-host only). `tcp` connects via TCP
+#         (allows remote backends).
+#         - Type: str
+#         - Required: No
+#         - Default: socket
+#         - Choices: socket, tcp
+#       - socket:
+#         Absolute path to the PHP-FPM Unix socket. Only used when `type` is set
+#         to `socket`.
+#         - Type: str
+#         - Required: No
+#         - Default: /run/php/php-fpm.sock
+#       - tcp_host:
+#         Hostname or IP address of the PHP-FPM backend. Only used when `type`
+#         is set to `tcp`.
+#         - Type: str
+#         - Required: No
+#         - Default: 127.0.0.1
+#       - tcp_port:
+#         TCP port of the PHP-FPM backend. Only used when `type` is set to
+#         `tcp`.
+#         - Type: int
+#         - Required: No
+#         - Default: 9000
+#   - tls-baseline:
+#     Settings for the `global/tls-baseline.conf` snippet that provides TLS
+#     hardening following the Mozilla "Intermediate" profile.
+#     - Type: dict
+#     - Required: No
+#     - Dict attributes:
+#       - dhparam_path:
+#         Absolute path where the DH parameters file is deployed. The role ships
+#         RFC 7919 ffdhe3072 parameters and deploys them to this path
+#         automatically. Platform-specific vars files override this to match
+#         each distribution's conventional TLS directory (e.g.
+#         `/etc/pki/tls/certs/` on Red Hat).
+#         - Type: str
+#         - Required: No
+#         - Default: /etc/ssl/certs/dhparam_ffdhe3072.pem
+#       - ecdh_curves:
+#         Colon-separated list of elliptic curves for ECDHE key exchange, passed
+#         to the `SSLOpenSSLConfCmd Curves` directive. The default includes the
+#         post-quantum hybrid `X25519MLKEM768` (requires OpenSSL >= 3.5);
+#         platforms with older OpenSSL automatically fall back to a
+#         classical-only list via version-specific vars files.
+#         - Type: str
+#         - Required: No
+#         - Default: X25519MLKEM768:X25519:prime256v1:secp384r1
+#       - resolvers:
+#         List of DNS resolver IP addresses used for OCSP stapling lookups.
+#         Using a local resolver (e.g. unbound, systemd-resolved at `127.0.0.1`)
+#         is recommended for privacy and latency.
+#         - Type: list
+#         - Required: No
+#         - List elements: str
+#       - resolver_timeout:
+#         Timeout for DNS resolver queries used by OCSP stapling.
+#         - Type: str
+#         - Required: No
+#         - Default: 3s
 run_apache_httpd_snippet_settings: {}
 
 # List of Apache module short names to enable.

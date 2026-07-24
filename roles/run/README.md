@@ -242,6 +242,8 @@ There are also tags usually not meant to be called directly but listed for the s
 
 ## Role variables<a id="variables"></a>
 
+Main entry point for the foundata.apache_httpd.run role
+
 The following variables can be configured for this role:
 
 | Variable | Type | Required | Default | Description (abstract) |
@@ -252,7 +254,7 @@ The following variables can be configured for this role:
 | `run_apache_httpd_mpm` | `str` | No | `"event"` | Selects the Multi-Processing Module (MPM) that determines how Apache handles concurrent connections.<br><br>`event`: A hybrid multi-process/multi-threaded model with an event-driven connection handling loop. Best for modern workloads, especially with […](#variable-run_apache_httpd_mpm) |
 | `run_apache_httpd_vhosts_default_manage` | `bool` | No | `true` | Controls whether the role includes a hardened catch-all `` in the main configuration file.<br><br>When set to `true`, a default VirtualHost is rendered that listens on ports 80 and 443 with a minimal, restrictive configuration. This acts as a […](#variable-run_apache_httpd_vhosts_default_manage) |
 | `run_apache_httpd_main_config_block` | `str` | No | `""` | Additional Apache HTTPD configuration directives for the global (server-wide) context of the main configuration file.<br><br>The value is inserted verbatim into the rendered configuration file. Only directives valid in the Apache server config […](#variable-run_apache_httpd_main_config_block) |
-| `run_apache_httpd_main_config_baseline_manage` | `bool` | No | `true` | Controls whether the role injects curated baseline directives into the main configuration file.<br><br>When set to `true`, the role provides sane defaults for the global context (e.g., `ServerTokens ProductOnly`, `ServerSignature Off`, `TraceEnable […](#variable-run_apache_httpd_main_config_baseline_manage) |
+| `run_apache_httpd_main_config_baseline_manage` | `bool` | No | `true` | Controls whether the role injects curated baseline directives into the main configuration file.<br><br>When set to `true`, the role provides sane defaults for the global context (e.g., `ServerTokens ProductOnly`, `ServerSignature Off`, […](#variable-run_apache_httpd_main_config_baseline_manage) |
 | `run_apache_httpd_vhosts_config` | `list` | No | `[]` | List of VirtualHost definitions (sometimes called vHosts or sites) to manage. Each entry describes a VirtualHost as a dictionary holding its name, enablement state, and raw Apache configuration content.<br><br>For each entry, the role renders a […](#variable-run_apache_httpd_vhosts_config) |
 | `run_apache_httpd_vhosts_delete_unmanaged` | `bool` | No | `true` | Controls whether the role removes stale VirtualHost files that are not declared in `run_apache_httpd_vhosts_config`.<br><br>When set to `true`, any `*.conf` file or symlink found in the available and enabled directories whose name does not match an […](#variable-run_apache_httpd_vhosts_delete_unmanaged) |
 | `run_apache_httpd_modules_enabled` | `list` | No | `[]` | List of Apache module short names to enable.<br><br>Module names correspond to what `a2enmod` accepts or the `.so` filename with the `mod_` prefix and `_module`/`.so` suffix stripped (e.g. `ssl` from `mod_ssl.so`, `proxy_fcgi` from […](#variable-run_apache_httpd_modules_enabled) |
