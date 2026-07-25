@@ -676,6 +676,101 @@
         success_msg: "Emptying run_apache_httpd_modules_enabled removed the role-managed module configs."
 
 
+## Migration: pre-existing, unmanaged vhost configs (brownfield)
+#
+# Taking over a host that already serves vhosts is the common migration case,
+# and run_apache_httpd_vhosts_delete_unmanaged decides what happens to those
+# files. Both directions are contractual: with deletion enabled the role owns
+# the vhost directories exclusively, with it disabled foreign vhosts must
+# survive so the role can be adopted next to an existing setup.
+#
+# The planted vhost is created in vhosts-available only and never enabled, so it
+# stays inert and cannot influence the configuration test that the role's
+# handlers run. Deletion is exercised regardless, because the role searches both
+# the available and the enabled directory.
+#
+# Order matters: the preserving run comes first, so the removing run afterwards
+# leaves the host in the clean state the uninstall regression below expects.
+
+- name: "Molecule | Verify | Validate unmanaged vhost handling on migration (integration)"
+  vars:
+    __testing_unmanaged_vhost: >-
+      {{ __run_apache_httpd_config_service_dropin_vhosts_available_dir_path }}/molecule-unmanaged.conf
+    __testing_managed_vhost: >-
+      {{ __run_apache_httpd_config_service_dropin_vhosts_available_dir_path }}/example.com.conf
+  block:
+
+    - name: "Molecule | Verify | Plant a pre-existing, unmanaged vhost config"
+      ansible.builtin.copy:
+        content: |
+          # Unmanaged vhost planted by the molecule test to simulate a host that
+          # already served vhosts before the role was adopted.
+          <VirtualHost *:8099>
+              ServerName molecule-unmanaged.example.net
+              DocumentRoot "/var/www/example.com"
+          </VirtualHost>
+        dest: "{{ __testing_unmanaged_vhost }}"
+        owner: "{{ __run_apache_httpd_config_service_dropin_vhosts_available_dir_owner }}"
+        group: "{{ __run_apache_httpd_config_service_dropin_vhosts_available_dir_group }}"
+        mode: "u=rw,g=r,o=r" # 0644
+
+
+    - name: "Molecule | Verify | Re-run the role with unmanaged vhost deletion disabled"
+      ansible.builtin.include_role:
+        name: "foundata.apache_httpd.run"
+      vars:
+        run_apache_httpd_vhosts_delete_unmanaged: false
+
+
+    - name: "Molecule | Verify | Stat the unmanaged vhost after the run with deletion disabled"
+      ansible.builtin.stat:
+        path: "{{ __testing_unmanaged_vhost }}"
+      register: __testing_unmanaged_vhost_kept
+
+
+    - name: "Molecule | Verify | Assert the unmanaged vhost survives when deletion is disabled"
+      ansible.builtin.assert:
+        that:
+          - __testing_unmanaged_vhost_kept['stat']['exists']
+        fail_msg: >-
+          The unmanaged vhost '{{ __testing_unmanaged_vhost }}' was removed even though
+          run_apache_httpd_vhosts_delete_unmanaged was false. Adopting the role next to an
+          existing setup would delete foreign vhosts.
+        success_msg: >-
+          The unmanaged vhost was left untouched while
+          run_apache_httpd_vhosts_delete_unmanaged was false.
+
+
+    - name: "Molecule | Verify | Re-run the role with unmanaged vhost deletion enabled"
+      ansible.builtin.include_role:
+        name: "foundata.apache_httpd.run"
+      vars:
+        run_apache_httpd_vhosts_delete_unmanaged: true
+
+
+    - name: "Molecule | Verify | Stat the unmanaged and a managed vhost after the run with deletion enabled"
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - "{{ __testing_unmanaged_vhost }}"
+        - "{{ __testing_managed_vhost }}"
+      register: __testing_unmanaged_vhost_reaped
+
+
+    - name: "Molecule | Verify | Assert the unmanaged vhost is removed while the managed one stays"
+      ansible.builtin.assert:
+        that:
+          - not __testing_unmanaged_vhost_reaped['results'][0]['stat']['exists']
+          - __testing_unmanaged_vhost_reaped['results'][1]['stat']['exists']
+        fail_msg: >-
+          Enabling run_apache_httpd_vhosts_delete_unmanaged did not remove the unmanaged vhost
+          '{{ __testing_unmanaged_vhost }}', or it also removed the managed vhost
+          '{{ __testing_managed_vhost }}'.
+        success_msg: >-
+          Enabling run_apache_httpd_vhosts_delete_unmanaged removed the unmanaged vhost and
+          kept the managed one.
+
+
 # Flush pending config-validation/restart handlers now, while the role is still
 # installed and its configuration is valid, so they do not run at play end after
 # the uninstall regression below has removed the package and its config.
