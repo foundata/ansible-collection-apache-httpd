@@ -324,13 +324,15 @@
       loop: >-
         {{
           __run_apache_httpd_snippet_conf_files['files']
-          | ansible.builtin.rejectattr('path', 'search', '/(' ~ (__run_apache_httpd_expected_snippet_filenames | map('regex_escape') | join('|')) ~ ')$')
+          | ansible.builtin.rejectattr('path', 'ansible.builtin.search', '/(' ~ (__run_apache_httpd_expected_snippet_filenames
+                                                                                 | ansible.builtin.map('ansible.builtin.regex_escape')
+                                                                                 | ansible.builtin.join('|')) ~ ')$')
           | ansible.builtin.list
         }}
       loop_control:
         label: "{{ item['path'] }}"
       when:
-        - (__run_apache_httpd_snippet_conf_files['files'] | length) > 0
+        - (__run_apache_httpd_snippet_conf_files['files'] | ansible.builtin.length) > 0
       notify:
         - "run_apache_httpd: validate configuration"
         - "run_apache_httpd: reload apache_httpd.service"
@@ -343,11 +345,11 @@
     msg: >-
       Invalid vhost name "{{ item['name'] }}".
       Allowed characters are: a-z, A-Z, 0-9, dot (.), underscore (_), and hyphen (-).
-  loop: "{{ run_apache_httpd_vhosts_config | default([]) }}"
+  loop: "{{ run_apache_httpd_vhosts_config | ansible.builtin.default([]) }}"
   loop_control:
     label: "{{ item['name'] }}"
   when:
-    - item['name'] is not match('^[a-zA-Z0-9._-]+$')
+    - item['name'] is not ansible.builtin.match('^[a-zA-Z0-9._-]+$')
 
 
 - name: "Config | Default | Create or update vhost config files"
@@ -375,7 +377,7 @@
   ansible.builtin.file:
     src: "{{ __run_apache_httpd_config_service_dropin_vhosts_available_dir_path }}/{{ __run_apache_httpd_loop_file_name }}"
     dest: "{{ __run_apache_httpd_config_service_dropin_vhosts_enabled_dir_path }}/{{ __run_apache_httpd_loop_file_name }}"
-    state: "{{ (item.enabled | default(false)) | ternary('link', 'absent') }}"
+    state: "{{ (item.enabled | ansible.builtin.default(false)) | ansible.builtin.ternary('link', 'absent') }}"
     owner: "{{ __run_apache_httpd_config_service_dropin_file_owner }}"
     group: "{{ __run_apache_httpd_config_service_dropin_file_group }}"
     mode: "{{ __run_apache_httpd_config_service_dropin_file_mode }}"
@@ -388,7 +390,7 @@
       {{ __run_apache_httpd_config_service_dropin_vhosts_enabled_dir_path }}/{{ __run_apache_httpd_loop_file_name }}
       -> {{ __run_apache_httpd_config_service_dropin_vhosts_available_dir_path }}/{{ __run_apache_httpd_loop_file_name }}
   when:
-    - (run_apache_httpd_vhosts_config | ansible.builtin.default([])) | length > 0
+    - (run_apache_httpd_vhosts_config | ansible.builtin.default([])) | ansible.builtin.length > 0
   notify:
     - "run_apache_httpd: validate configuration"
     - "run_apache_httpd: reload apache_httpd.service"
@@ -403,7 +405,7 @@
       ansible.builtin.set_fact:
         __run_apache_httpd_expected_vhost_filenames: >-
           {{
-            (run_apache_httpd_vhosts_config | default([]))
+            (run_apache_httpd_vhosts_config | ansible.builtin.default([]))
             | ansible.builtin.map(attribute='name')
             | ansible.builtin.map('ansible.builtin.regex_replace', '$', '.conf')
             | ansible.builtin.list
@@ -436,13 +438,15 @@
         {{
           __run_apache_httpd_vhost_conf_files['files']
           | ansible.builtin.rejectattr('isdir')
-          | ansible.builtin.rejectattr('path', 'search', '/(' ~ (__run_apache_httpd_expected_vhost_filenames | map('regex_escape') | join('|')) ~ ')$')
+          | ansible.builtin.rejectattr('path', 'ansible.builtin.search', '/(' ~ (__run_apache_httpd_expected_vhost_filenames
+                                                                                 | ansible.builtin.map('ansible.builtin.regex_escape')
+                                                                                 | ansible.builtin.join('|')) ~ ')$')
           | ansible.builtin.list
         }}
       loop_control:
         label: "{{ item['path'] }}"
       when:
-        - (__run_apache_httpd_vhost_conf_files['files'] | length) > 0
+        - (__run_apache_httpd_vhost_conf_files['files'] | ansible.builtin.length) > 0
       notify:
         - "run_apache_httpd: validate configuration"
         - "run_apache_httpd: reload apache_httpd.service"
@@ -467,7 +471,7 @@
             __run_apache_httpd_effective_modules_enabled
             | ansible.builtin.default([])
             | ansible.builtin.select('in', __run_apache_httpd_modules_map_resources.keys() | ansible.builtin.list)
-            | ansible.builtin.map('extract', __run_apache_httpd_modules_map_resources)
+            | ansible.builtin.map('ansible.builtin.extract', __run_apache_httpd_modules_map_resources)
             | ansible.builtin.map(attribute='conf_files')
             | ansible.builtin.flatten
             | ansible.builtin.unique(attribute='name')
@@ -497,7 +501,7 @@
         regexp: "^APACHE_MODULES="
         line: >-
           APACHE_MODULES="{{ __run_apache_httpd_effective_modules_enabled
-            | ansible.builtin.reject('match', '^mpm_')
+            | ansible.builtin.reject('ansible.builtin.match', '^mpm_')
             | ansible.builtin.join(' ') }}"
         state: "present"
       when:
@@ -550,7 +554,7 @@
             __run_apache_httpd_modules_map_resources.values()
             | ansible.builtin.map(attribute='conf_files')
             | ansible.builtin.flatten
-            | ansible.builtin.selectattr('type', 'equalto', 'symlink')
+            | ansible.builtin.selectattr('type', 'ansible.builtin.equalto', 'symlink')
             | ansible.builtin.map(attribute='name')
             | ansible.builtin.unique
             | ansible.builtin.list
@@ -561,10 +565,10 @@
           {{
             (__run_apache_httpd_effective_modules_enabled | ansible.builtin.default([]))
             | ansible.builtin.select('in', __run_apache_httpd_modules_map_resources.keys() | ansible.builtin.list)
-            | ansible.builtin.map('extract', __run_apache_httpd_modules_map_resources)
+            | ansible.builtin.map('ansible.builtin.extract', __run_apache_httpd_modules_map_resources)
             | ansible.builtin.map(attribute='conf_files')
             | ansible.builtin.flatten
-            | ansible.builtin.selectattr('type', 'equalto', 'symlink')
+            | ansible.builtin.selectattr('type', 'ansible.builtin.equalto', 'symlink')
             | ansible.builtin.map(attribute='name')
             | ansible.builtin.unique
             | ansible.builtin.list
@@ -591,10 +595,10 @@
         {{
           __run_apache_httpd_module_conf_files['files']
           | ansible.builtin.rejectattr('isdir')
-          | ansible.builtin.selectattr('path', 'search', '/(' ~ (__run_apache_httpd_modules_managed_filenames
+          | ansible.builtin.selectattr('path', 'ansible.builtin.search', '/(' ~ (__run_apache_httpd_modules_managed_filenames
                                                                  | ansible.builtin.map('ansible.builtin.regex_escape')
                                                                  | ansible.builtin.join('|')) ~ ')$')
-          | ansible.builtin.rejectattr('path', 'search', '/(' ~ (__run_apache_httpd_modules_expected_filenames
+          | ansible.builtin.rejectattr('path', 'ansible.builtin.search', '/(' ~ (__run_apache_httpd_modules_expected_filenames
                                                                  | ansible.builtin.map('ansible.builtin.regex_escape')
                                                                  | ansible.builtin.join('|')) ~ ')$')
           | ansible.builtin.list

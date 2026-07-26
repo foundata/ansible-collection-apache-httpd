@@ -128,7 +128,7 @@ AccessFileName .htaccess
     CustomLog /dev/null common
 </VirtualHost>
 
-{% if 'ssl' in modules_enabled and (__run_apache_httpd_snakeoil_cert_path | length) > 0 and (__run_apache_httpd_snakeoil_key_path | length) > 0 %}
+{% if 'ssl' in modules_enabled and (__run_apache_httpd_snakeoil_cert_path | ansible.builtin.length) > 0 and (__run_apache_httpd_snakeoil_key_path | ansible.builtin.length) > 0 %}
 <IfModule ssl_module>
 <VirtualHost *:443>
     ServerName localhost

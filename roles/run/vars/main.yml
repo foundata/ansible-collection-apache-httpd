@@ -82,7 +82,7 @@ __run_apache_httpd_packages_uninstall: >-
   {{
     __run_apache_httpd_packages_install
     + (__run_apache_httpd_modules_map_resources.values()
-       | map(attribute='packages')
+       | ansible.builtin.map(attribute='packages')
        | ansible.builtin.flatten
        | ansible.builtin.unique
        | ansible.builtin.list)
