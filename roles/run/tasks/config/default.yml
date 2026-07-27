@@ -97,10 +97,28 @@
     - (__run_apache_httpd_snakeoil_key_path | ansible.builtin.default('') | ansible.builtin.length) > 0
   block:
 
-    - name: "Config | Default | Check if snakeoil certificate exists"
+    - name: "Config | Default | Check if snakeoil certificate and key exist"
       ansible.builtin.stat:
-        path: "{{ __run_apache_httpd_snakeoil_cert_path }}"
-      register: __run_apache_httpd_snakeoil_cert_stat
+        path: "{{ item }}"
+      register: __run_apache_httpd_snakeoil_stat
+      loop:
+        - "{{ __run_apache_httpd_snakeoil_cert_path }}"
+        - "{{ __run_apache_httpd_snakeoil_key_path }}"
+
+
+    # A pair with either half missing is unusable: the HTTPS catch-all
+    # VirtualHost references both files, so Apache would refuse to start. The
+    # pair is a throwaway placeholder, so it is regenerated as a whole in that
+    # case (one openssl call writes certificate and key).
+    - name: "Config | Default | Determine whether the snakeoil pair must be (re)generated"
+      ansible.builtin.set_fact:
+        __run_apache_httpd_snakeoil_regenerate: >-
+          {{
+            (__run_apache_httpd_snakeoil_stat['results']
+             | ansible.builtin.rejectattr('stat.exists')
+             | ansible.builtin.list
+             | ansible.builtin.length) > 0
+          }}
 
 
     - name: "Config | Default | Ensure snakeoil certificate directory exists"
@@ -111,7 +129,7 @@
         group: "root"
         mode: "u=rwx,g=rx,o=rx"
       when:
-        - not __run_apache_httpd_snakeoil_cert_stat['stat']['exists']
+        - __run_apache_httpd_snakeoil_regenerate | ansible.builtin.bool
 
 
     - name: "Config | Default | Ensure snakeoil key directory exists"
@@ -122,7 +140,7 @@
         group: "root"
         mode: "u=rwx,g=,o="
       when:
-        - not __run_apache_httpd_snakeoil_cert_stat['stat']['exists']
+        - __run_apache_httpd_snakeoil_regenerate | ansible.builtin.bool
 
 
     - name: "Config | Default | Generate self-signed snakeoil certificate and key"
@@ -142,9 +160,12 @@
           - "3650"
           - "-subj"
           - "/CN=localhost"
-        creates: "{{ __run_apache_httpd_snakeoil_cert_path }}"
+      # no "creates:" on purpose: with only the certificate present the key
+      # would never be regenerated. The when-gate keeps this idempotent, and
+      # when it runs it always (re)writes both files.
+      changed_when: true
       when:
-        - not __run_apache_httpd_snakeoil_cert_stat['stat']['exists']
+        - __run_apache_httpd_snakeoil_regenerate | ansible.builtin.bool
 
 
     - name: "Config | Default | Set snakeoil key file permissions"
@@ -154,7 +175,7 @@
         group: "root"
         mode: "u=rw,g=,o="
       when:
-        - not __run_apache_httpd_snakeoil_cert_stat['stat']['exists']
+        - __run_apache_httpd_snakeoil_regenerate | ansible.builtin.bool
 
 
 ## Main config file

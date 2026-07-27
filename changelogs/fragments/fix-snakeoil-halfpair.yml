@@ -1,0 +1,9 @@
+---
+
+bugfixes:
+  - >
+    ``run`` role - The self-signed (snakeoil) certificate pair for the HTTPS
+    catch-all VirtualHost is now regenerated when either half is missing.
+    Before, only the certificate was checked: an existing certificate with a
+    missing key was left as-is, and Apache refused to start over the broken
+    ``SSLCertificateKeyFile`` reference in the catch-all VirtualHost.

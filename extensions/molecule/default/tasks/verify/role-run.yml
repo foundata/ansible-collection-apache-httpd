@@ -778,6 +778,53 @@
   ansible.builtin.meta: flush_handlers
 
 
+## Regression: a half-missing snakeoil pair is regenerated as a whole
+#
+# The HTTPS catch-all VirtualHost references certificate AND key; with only
+# the certificate checked, an existing certificate with a missing key was
+# left as-is and Apache refused to start. Remove the key, re-run the role and
+# assert the pair is complete again with the expected key permissions.
+
+- name: "Molecule | Verify | Snakeoil pair: remove the key half"
+  ansible.builtin.file:
+    path: "{{ __run_apache_httpd_snakeoil_key_path }}"
+    state: "absent"
+
+
+- name: "Molecule | Verify | Snakeoil pair: re-run the foundata.apache_httpd.run role"
+  ansible.builtin.include_role:
+    name: "foundata.apache_httpd.run"
+
+
+- name: "Molecule | Verify | Snakeoil pair: run the notified handlers"
+  ansible.builtin.meta: "flush_handlers"
+
+
+- name: "Molecule | Verify | Snakeoil pair: get the status of both halves"
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  register: __testing_snakeoil_stat
+  loop:
+    - "{{ __run_apache_httpd_snakeoil_cert_path }}"
+    - "{{ __run_apache_httpd_snakeoil_key_path }}"
+
+
+- name: "Molecule | Verify | Snakeoil pair: assert the pair was regenerated as a whole"
+  ansible.builtin.assert:
+    that:
+      - __testing_snakeoil_stat['results'][0]['stat']['exists']
+      - __testing_snakeoil_stat['results'][1]['stat']['exists']
+      - __testing_snakeoil_stat['results'][1]['stat']['mode'] == '0600'
+      - __testing_snakeoil_stat['results'][1]['stat']['pw_name'] == 'root'
+    fail_msg: >-
+      Re-running the role did not regenerate the snakeoil pair after its key
+      was removed (cert exists:
+      {{ __testing_snakeoil_stat['results'][0]['stat']['exists'] }}, key exists:
+      {{ __testing_snakeoil_stat['results'][1]['stat']['exists'] }}). The HTTPS
+      catch-all VirtualHost references both files, Apache would refuse to start.
+    success_msg: "A snakeoil pair with a missing key is regenerated as a whole (key 0600, root-owned)."
+
+
 ## Regression: uninstall removes managed vhost files/symlinks by absolute path
 #
 # This block runs LAST because it uninstalls the role. It guards the uninstall
