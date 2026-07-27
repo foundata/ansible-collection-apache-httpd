@@ -1,0 +1,13 @@
+---
+
+bugfixes:
+  - >
+    ``run`` role - A ``run_apache_httpd_vhosts_config`` entry without
+    ``enabled: true`` no longer fails the run: the enable/disable task passed
+    ``src`` together with ``state: absent``, which ansible-core rejects. The
+    options are now omitted when the symlink is being removed.
+  - >
+    ``run`` role - Documentation: reinstalling the distribution's Apache on
+    Debian/Ubuntu after ``run_apache_httpd_state: absent`` requires
+    ``apt purge`` first; this dpkg conffile behavior is now documented in the
+    ``run_apache_httpd_state`` description.

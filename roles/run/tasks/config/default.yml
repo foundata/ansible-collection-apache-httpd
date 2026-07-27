@@ -396,15 +396,22 @@
 
 - name: "Config | Default | Enable/disable vhost symlinks"
   ansible.builtin.file:
-    src: "{{ __run_apache_httpd_config_service_dropin_vhosts_available_dir_path }}/{{ __run_apache_httpd_loop_file_name }}"
+    # src/owner/group/mode must be omitted for state "absent": passing src
+    # alongside state "absent" is a module error, so a disabled (or
+    # enabled-by-default-false) vhost entry would otherwise fail the run.
+    src: >-
+      {{ __run_apache_httpd_loop_enabled | ansible.builtin.ternary(
+           __run_apache_httpd_config_service_dropin_vhosts_available_dir_path
+           ~ '/' ~ __run_apache_httpd_loop_file_name, omit) }}
     dest: "{{ __run_apache_httpd_config_service_dropin_vhosts_enabled_dir_path }}/{{ __run_apache_httpd_loop_file_name }}"
-    state: "{{ (item.enabled | ansible.builtin.default(false)) | ansible.builtin.ternary('link', 'absent') }}"
-    owner: "{{ __run_apache_httpd_config_service_dropin_file_owner }}"
-    group: "{{ __run_apache_httpd_config_service_dropin_file_group }}"
-    mode: "{{ __run_apache_httpd_config_service_dropin_file_mode }}"
+    state: "{{ __run_apache_httpd_loop_enabled | ansible.builtin.ternary('link', 'absent') }}"
+    owner: "{{ __run_apache_httpd_loop_enabled | ansible.builtin.ternary(__run_apache_httpd_config_service_dropin_file_owner, omit) }}"
+    group: "{{ __run_apache_httpd_loop_enabled | ansible.builtin.ternary(__run_apache_httpd_config_service_dropin_file_group, omit) }}"
+    mode: "{{ __run_apache_httpd_loop_enabled | ansible.builtin.ternary(__run_apache_httpd_config_service_dropin_file_mode, omit) }}"
     force: true
   vars:
     __run_apache_httpd_loop_file_name: "{{ item['name'] }}.conf"
+    __run_apache_httpd_loop_enabled: "{{ item['enabled'] | ansible.builtin.default(false) }}"
   loop: "{{ run_apache_httpd_vhosts_config | ansible.builtin.default([]) }}"
   loop_control:
     label: >-

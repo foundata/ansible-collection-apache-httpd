@@ -21,6 +21,14 @@ argument_specs:
 
           `absent` reverts changes as much as possible, such as removing packages,
           deleting created users, stopping services, restoring modified settings, …
+
+          Note for Debian/Ubuntu: reinstalling the distribution's Apache after
+          `absent` requires purging first (`apt purge apache2 && apt install
+          apache2`). A plain `apt install` does not restore configuration files
+          that were removed under the role's ownership (dpkg never reinstalls
+          deleted conffiles and does not re-enable the default modules), leaving
+          a non-starting server. On SUSE and EL platforms a plain reinstall
+          yields a working default installation.
         type: "str"
         default: "present"
         choices:
