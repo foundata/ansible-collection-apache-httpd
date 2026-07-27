@@ -858,6 +858,32 @@
         success_msg: "Managed vhost file and enabled symlink exist before uninstall."
 
 
+    # Simulate a vhost that was renamed since deployment: the marker-carrying
+    # file exists on disk but is absent from run_apache_httpd_vhosts_config,
+    # so only the marker sweep can find it during uninstall.
+    - name: "Molecule | Verify | Plant a renamed historical vhost file before uninstall"
+      ansible.builtin.copy:
+        src: "{{ __testing_uninstall_vhost_available }}"
+        dest: "{{ __run_apache_httpd_config_service_dropin_vhosts_available_dir_path }}/renamed-leftover.conf"
+        remote_src: true
+        mode: "preserve"
+
+
+    - name: "Molecule | Verify | Plant the matching enabled symlink for the historical vhost"
+      ansible.builtin.file:
+        src: "{{ __run_apache_httpd_config_service_dropin_vhosts_available_dir_path }}/renamed-leftover.conf"
+        dest: "{{ __run_apache_httpd_config_service_dropin_vhosts_enabled_dir_path }}/renamed-leftover.conf"
+        state: "link"
+
+
+    - name: "Molecule | Verify | Read the saved pre-role sysconfig before uninstall (SUSE)"
+      ansible.builtin.slurp:
+        src: "/etc/sysconfig/apache2.ansible-orig"
+      register: __testing_uninstall_sysconfig_backup
+      when:
+        - ansible_facts['os_family'] == 'Suse'
+
+
     - name: "Molecule | Verify | Uninstall the role (run_apache_httpd_state: absent)"
       ansible.builtin.include_role:
         name: "foundata.apache_httpd.run"
@@ -883,6 +909,85 @@
           Uninstall left managed vhost files behind (available exists={{ __testing_uninstall_after['results'][0]['stat']['exists'] }},
           enabled exists={{ __testing_uninstall_after['results'][1]['stat']['exists'] }}).
         success_msg: "Uninstall removed the managed vhost file and its enabled symlink."
+
+
+    - name: "Molecule | Verify | Stat the planted historical vhost after uninstall"
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: __testing_uninstall_leftover_after
+      loop:
+        - "{{ __run_apache_httpd_config_service_dropin_vhosts_available_dir_path }}/renamed-leftover.conf"
+        - "{{ __run_apache_httpd_config_service_dropin_vhosts_enabled_dir_path }}/renamed-leftover.conf"
+
+
+    - name: "Molecule | Verify | Assert the marker sweep removed the renamed historical vhost"
+      ansible.builtin.assert:
+        that:
+          - not __testing_uninstall_leftover_after['results'][0]['stat']['exists']
+          - not __testing_uninstall_leftover_after['results'][1]['stat']['exists']
+        fail_msg: >-
+          A marker-carrying vhost file absent from run_apache_httpd_vhosts_config
+          survived the uninstall (renamed historical vhosts would linger).
+        success_msg: "The renamed historical vhost was removed by the marker sweep."
+
+
+    - name: "Molecule | Verify | Stat role-managed module symlinks after uninstall (Debian)"
+      ansible.builtin.stat:
+        path: "/etc/apache2/mods-enabled/{{ item }}"
+      register: __testing_uninstall_modlinks_after
+      when:
+        - ansible_facts['os_family'] == 'Debian'
+      loop:
+        - "ssl.load"
+        - "headers.load"
+        - "rewrite.load"
+
+
+    - name: "Molecule | Verify | Assert role-managed module symlinks were removed (Debian)"
+      ansible.builtin.assert:
+        that:
+          - >-
+            (__testing_uninstall_modlinks_after['results']
+             | ansible.builtin.selectattr('stat', 'ansible.builtin.defined')
+             | ansible.builtin.selectattr('stat.exists')
+             | ansible.builtin.list | ansible.builtin.length) == 0
+        fail_msg: "Role-managed module symlinks survived the uninstall in mods-enabled."
+        success_msg: "Role-managed module symlinks were removed from mods-enabled."
+      when:
+        - ansible_facts['os_family'] == 'Debian'
+
+
+    - name: "Molecule | Verify | Read the sysconfig after uninstall (SUSE)"
+      ansible.builtin.slurp:
+        src: "/etc/sysconfig/apache2"
+      register: __testing_uninstall_sysconfig_after
+      when:
+        - ansible_facts['os_family'] == 'Suse'
+
+
+    - name: "Molecule | Verify | Stat the saved pre-role sysconfig after uninstall (SUSE)"
+      ansible.builtin.stat:
+        path: "/etc/sysconfig/apache2.ansible-orig"
+      register: __testing_uninstall_sysconfig_backup_after
+      when:
+        - ansible_facts['os_family'] == 'Suse'
+
+
+    - name: "Molecule | Verify | Assert the pre-role APACHE_MODULES value was restored (SUSE)"
+      ansible.builtin.assert:
+        that:
+          - >-
+            ((__testing_uninstall_sysconfig_after['content'] | ansible.builtin.b64decode)
+             | ansible.builtin.regex_search('(?m)^APACHE_MODULES=.*$'))
+            == ((__testing_uninstall_sysconfig_backup['content'] | ansible.builtin.b64decode)
+                | ansible.builtin.regex_search('(?m)^APACHE_MODULES=.*$'))
+          - not __testing_uninstall_sysconfig_backup_after['stat']['exists']
+        fail_msg: >-
+          Uninstall did not restore the pre-role APACHE_MODULES sysconfig value
+          (or left the saved pre-role copy behind).
+        success_msg: "The pre-role APACHE_MODULES value was restored and the saved copy removed."
+      when:
+        - ansible_facts['os_family'] == 'Suse'
 
 
 ## Init-only merged variable evaluation

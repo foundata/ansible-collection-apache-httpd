@@ -516,6 +516,20 @@
         - "run_apache_httpd: restart apache_httpd.service"
 
 
+    # Save the pre-role sysconfig once before the first edit; uninstall
+    # restores the managed lines from this copy (force: false keeps the very
+    # first version, later runs never overwrite it with role-edited content).
+    - name: "Config | Default | Save the pre-role sysconfig before the first edit (sysconfig type)"
+      ansible.builtin.copy:
+        src: "{{ __run_apache_httpd_sysconfig_path }}"
+        dest: "{{ __run_apache_httpd_sysconfig_path }}.ansible-orig"
+        remote_src: true
+        force: false
+        mode: "preserve"
+      when:
+        - (__run_apache_httpd_sysconfig_path | ansible.builtin.default('') | ansible.builtin.length) > 0
+
+
     - name: "Config | Default | Update APACHE_MODULES sysconfig variable (sysconfig type)"
       ansible.builtin.lineinfile:
         path: "{{ __run_apache_httpd_sysconfig_path }}"

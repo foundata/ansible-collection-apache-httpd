@@ -55,6 +55,51 @@
   loop: "{{ __run_apache_httpd_paths_to_remove }}"
 
 
+# Historical vhosts (renamed or de-listed since deployment) cannot be derived
+# from the current run_apache_httpd_vhosts_config value. On Debian/SUSE the
+# vhost directories are kept, so sweep them for files carrying the role's
+# ownership marker (the list-based removal above still covers files from
+# releases that predate the marker).
+- name: "Setup | Uninstall | Find remaining vhost config files"
+  ansible.builtin.find:
+    paths:
+      - "{{ __run_apache_httpd_config_service_dropin_vhosts_available_dir_path }}"
+      - "{{ __run_apache_httpd_config_service_dropin_vhosts_enabled_dir_path }}"
+    patterns:
+      - "*.conf"
+    # "any" so enabled-vhost symlinks are matched too (grep dereferences them,
+    # so a symlink to a marker-carrying file is removed alongside its target)
+    file_type: "any"
+    hidden: true
+  register: __run_apache_httpd_uninstall_find_result
+
+
+- name: "Setup | Uninstall | Determine marker-managed vhost config files"
+  ansible.builtin.command:
+    argv: >-
+      {{
+        [__run_apache_httpd_grep_exec_path, '-l', '-s', '--', __run_apache_httpd_config_file_marker]
+        + (__run_apache_httpd_uninstall_find_result['files']
+           | ansible.builtin.rejectattr('isdir')
+           | ansible.builtin.map(attribute='path') | ansible.builtin.list)
+      }}
+  register: __run_apache_httpd_uninstall_owned_result
+  changed_when: false
+  failed_when:
+    - __run_apache_httpd_uninstall_owned_result['rc'] not in [0, 1, 2]
+  when:
+    - (__run_apache_httpd_uninstall_find_result['files'] | ansible.builtin.length) > 0
+
+
+- name: "Setup | Uninstall | Remove marker-managed vhost config files"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: "absent"
+  loop: "{{ __run_apache_httpd_uninstall_owned_result['stdout_lines'] | ansible.builtin.default([]) }}"
+  loop_control:
+    label: "{{ item }}"
+
+
 - name: "Setup | Uninstall | Remove vhosts directories (non-Debian platforms)"
   ansible.builtin.file:
     path: "{{ item }}"
@@ -103,6 +148,104 @@
     state: "absent"
   when:
     - (ansible_facts['os_family'] | ansible.builtin.lower) != 'debian'
+
+
+# mods-enabled is kept on Debian (package directory), so the symlinks for the
+# module universe this role manages (the same set the config-phase
+# reconciliation owns via run_apache_httpd_modules_disable_unmanaged) are
+# removed explicitly; symlinks cannot carry an ownership marker. Restoring
+# the distribution's default module set is the package manager's job
+# (purge + reinstall).
+- name: "Setup | Uninstall | Remove role-managed module config symlinks (Debian)"
+  ansible.builtin.file:
+    path: "{{ __run_apache_httpd_config_service_dropin_modules_enabled_dir_path }}/{{ item }}"
+    state: "absent"
+  when:
+    - (ansible_facts['os_family'] | ansible.builtin.lower) == 'debian'
+  loop: >-
+    {{
+      __run_apache_httpd_modules_map_resources.values()
+      | ansible.builtin.map(attribute='conf_files')
+      | ansible.builtin.flatten
+      | ansible.builtin.selectattr('type', 'ansible.builtin.equalto', 'symlink')
+      | ansible.builtin.map(attribute='name')
+      | ansible.builtin.unique
+      | ansible.builtin.list
+    }}
+  loop_control:
+    label: "{{ item }}"
+
+
+# The config tasks overwrite APACHE_MODULES and clear several APACHE_* values
+# in /etc/sysconfig/apache2 (SUSE); the pre-role file is saved once before
+# the first edit. Restore exactly the managed lines from that copy so
+# unrelated admin edits to the file survive the uninstall.
+- name: "Setup | Uninstall | Check for the saved pre-role sysconfig (SUSE)"
+  ansible.builtin.stat:
+    path: "{{ __run_apache_httpd_sysconfig_path }}.ansible-orig"
+  register: __run_apache_httpd_sysconfig_backup_stat
+  when:
+    - (__run_apache_httpd_sysconfig_path | ansible.builtin.default('') | ansible.builtin.length) > 0
+
+
+- name: "Setup | Uninstall | Restore the pre-role sysconfig values (SUSE)"
+  when:
+    - (__run_apache_httpd_sysconfig_path | ansible.builtin.default('') | ansible.builtin.length) > 0
+    - __run_apache_httpd_sysconfig_backup_stat['stat']['exists']
+  vars:
+    __run_apache_httpd_sysconfig_managed_variables:
+      - "APACHE_MODULES"
+      - "APACHE_ACCESS_LOG"
+      - "APACHE_SERVERSIGNATURE"
+      - "APACHE_LOGLEVEL"
+      - "APACHE_SERVERTOKENS"
+      - "APACHE_TRACEENABLE"
+      - "APACHE_USE_CANONICAL_NAME"
+  block:
+
+    - name: "Setup | Uninstall | Read the saved pre-role sysconfig"
+      ansible.builtin.slurp:
+        src: "{{ __run_apache_httpd_sysconfig_path }}.ansible-orig"
+      register: __run_apache_httpd_sysconfig_backup_slurp
+
+
+    - name: "Setup | Uninstall | Restore managed sysconfig lines to their pre-role values"
+      ansible.builtin.lineinfile:
+        path: "{{ __run_apache_httpd_sysconfig_path }}"
+        regexp: "^{{ item }}="
+        line: "{{ __run_apache_httpd_sysconfig_orig_line }}"
+        state: "present"
+      vars:
+        __run_apache_httpd_sysconfig_orig_line: >-
+          {{
+            (__run_apache_httpd_sysconfig_backup_slurp['content'] | ansible.builtin.b64decode)
+            | ansible.builtin.regex_search('(?m)^' ~ item ~ '=.*$')
+          }}
+      when:
+        - __run_apache_httpd_sysconfig_orig_line is not ansible.builtin.none
+      loop: "{{ __run_apache_httpd_sysconfig_managed_variables }}"
+
+
+    - name: "Setup | Uninstall | Remove managed sysconfig lines absent from the pre-role file"
+      ansible.builtin.lineinfile:
+        path: "{{ __run_apache_httpd_sysconfig_path }}"
+        regexp: "^{{ item }}="
+        state: "absent"
+      vars:
+        __run_apache_httpd_sysconfig_orig_line: >-
+          {{
+            (__run_apache_httpd_sysconfig_backup_slurp['content'] | ansible.builtin.b64decode)
+            | ansible.builtin.regex_search('(?m)^' ~ item ~ '=.*$')
+          }}
+      when:
+        - __run_apache_httpd_sysconfig_orig_line is ansible.builtin.none
+      loop: "{{ __run_apache_httpd_sysconfig_managed_variables }}"
+
+
+    - name: "Setup | Uninstall | Remove the saved pre-role sysconfig"
+      ansible.builtin.file:
+        path: "{{ __run_apache_httpd_sysconfig_path }}.ansible-orig"
+        state: "absent"
 
 
 - name: "Setup | Uninstall | Remove packages"

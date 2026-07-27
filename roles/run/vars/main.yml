@@ -145,6 +145,16 @@ __run_apache_httpd_config_service_dropin_file_owner: "{{ __run_apache_httpd_conf
 __run_apache_httpd_config_service_dropin_file_group: "{{ __run_apache_httpd_config_service_file_group }}"
 __run_apache_httpd_config_service_dropin_file_mode: "{{ __run_apache_httpd_config_service_file_mode }}"
 
+# Marker line rendered into every vhost config file created by this role.
+# Load-bearing for the cleanup logic: uninstall sweeps the vhost directories
+# for files carrying this marker, so renamed or de-listed vhosts from earlier
+# runs are removed as well (their names cannot be derived from the current
+# run_apache_httpd_vhosts_config value).
+__run_apache_httpd_config_file_marker: "# Managed by Ansible (foundata.apache_httpd.run)"
+
+__run_apache_httpd_grep_exec_path: "/usr/bin/grep"
+
+
 __run_apache_httpd_config_service_dropin_vhosts_available_dir_path: "/etc/apache2/sites-available"
 __run_apache_httpd_config_service_dropin_vhosts_available_dir_owner: "{{ __run_apache_httpd_config_service_file_owner }}"
 __run_apache_httpd_config_service_dropin_vhosts_available_dir_group: "{{ __run_apache_httpd_config_service_file_group }}"
