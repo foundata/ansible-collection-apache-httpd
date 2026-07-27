@@ -14,9 +14,9 @@
     "{{ item['key'] }}": "{{ item['value'] }}"
   loop: >-
     {{
-      (__testing_state | default({}, true))
+      (__testing_state | ansible.builtin.default({}, true))
       | ansible.builtin.dict2items
-      | ansible.builtin.selectattr('key', 'match', '^(run_apache_httpd_|__testing_)')
+      | ansible.builtin.selectattr('key', 'ansible.builtin.match', '^(run_apache_httpd_|__testing_)')
       | ansible.builtin.list
     }}
 
@@ -405,7 +405,7 @@
       - __testing_headers_result['server'] is not ansible.builtin.search('Apache/[0-9]')
     fail_msg: >-
       The response headers contain Apache version information in the Server header.
-      Server header value: '{{ __testing_headers_result['server'] | default('') }}'
+      Server header value: '{{ __testing_headers_result['server'] | ansible.builtin.default('') }}'
     success_msg: >-
       The response headers do not contain Apache version information.
 
@@ -454,8 +454,8 @@
     fail_msg: >-
       DH parameters file does not exist or has wrong permissions at
       '{{ __run_apache_httpd_effective_snippet_settings['tls-baseline']['dhparam_path'] }}'.
-      Exists: {{ __testing_dhparam_file['stat']['exists'] | default(false) }},
-      Mode: {{ __testing_dhparam_file['stat']['mode'] | default('N/A') }}
+      Exists: {{ __testing_dhparam_file['stat']['exists'] | ansible.builtin.default(false) }},
+      Mode: {{ __testing_dhparam_file['stat']['mode'] | ansible.builtin.default('N/A') }}
     success_msg: >-
       DH parameters file exists with correct permissions (0644) at
       '{{ __run_apache_httpd_effective_snippet_settings['tls-baseline']['dhparam_path'] }}'.
@@ -480,7 +480,7 @@
       - __testing_apache_config_test['rc'] == 0
     fail_msg: >-
       Apache HTTPD config test failed with return code {{ __testing_apache_config_test['rc'] }}.
-      stderr: {{ __testing_apache_config_test['stderr'] | default('') }}
+      stderr: {{ __testing_apache_config_test['stderr'] | ansible.builtin.default('') }}
     success_msg: >-
       Apache HTTPD config test succeeded, configuration is valid.
 
@@ -631,7 +631,7 @@
         | ansible.builtin.map('extract', __run_apache_httpd_modules_map_resources)
         | ansible.builtin.map(attribute='conf_files')
         | ansible.builtin.flatten
-        | ansible.builtin.selectattr('type', 'equalto', 'symlink')
+        | ansible.builtin.selectattr('type', 'ansible.builtin.equalto', 'symlink')
         | ansible.builtin.map(attribute='name')
         | ansible.builtin.unique
         | ansible.builtin.list

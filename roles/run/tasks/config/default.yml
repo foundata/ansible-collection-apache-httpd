@@ -491,7 +491,7 @@
           {{
             __run_apache_httpd_effective_modules_enabled
             | ansible.builtin.default([])
-            | ansible.builtin.select('in', __run_apache_httpd_modules_map_resources.keys() | ansible.builtin.list)
+            | ansible.builtin.select('ansible.builtin.in', __run_apache_httpd_modules_map_resources.keys() | ansible.builtin.list)
             | ansible.builtin.map('ansible.builtin.extract', __run_apache_httpd_modules_map_resources)
             | ansible.builtin.map(attribute='conf_files')
             | ansible.builtin.flatten
@@ -585,7 +585,7 @@
         __run_apache_httpd_modules_expected_filenames: >-
           {{
             (__run_apache_httpd_effective_modules_enabled | ansible.builtin.default([]))
-            | ansible.builtin.select('in', __run_apache_httpd_modules_map_resources.keys() | ansible.builtin.list)
+            | ansible.builtin.select('ansible.builtin.in', __run_apache_httpd_modules_map_resources.keys() | ansible.builtin.list)
             | ansible.builtin.map('ansible.builtin.extract', __run_apache_httpd_modules_map_resources)
             | ansible.builtin.map(attribute='conf_files')
             | ansible.builtin.flatten
