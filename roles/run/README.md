@@ -507,7 +507,8 @@ run_apache_httpd_vhosts_config:
 
 Identifier used to build the config filename (`<name>.conf`) below
 the available and enabled directories. Must be unique within
-`run_apache_httpd_vhosts_config`.
+`run_apache_httpd_vhosts_config`; duplicate names cause the role
+to fail with a validation error.
 
 Allowed characters: `a-z`, `A-Z`, `0-9`, dot (`.`), underscore
 (`_`), and hyphen (`-`). Any other character causes the role to
