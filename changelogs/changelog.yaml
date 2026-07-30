@@ -1,6 +1,130 @@
 ---
 ancestor: null
 releases:
+  1.2.0:
+    changes:
+      bugfixes:
+        - 'The comment written into neutralized distribution config files contained
+          a stray double quote in the Debian hint (``dpkg -S ''<file>''"``), so the
+          suggested command could not be copied and pasted as-is. The quote is removed.
+
+          '
+        - '``run`` role - A ``run_apache_httpd_vhosts_config`` entry without ``enabled:
+          true`` no longer fails the run: the enable/disable task passed ``src`` together
+          with ``state: absent``, which ansible-core rejects. The options are now
+          omitted when the symlink is being removed.
+
+          '
+        - '``run`` role - Documentation: reinstalling the distribution''s Apache on
+          Debian/Ubuntu after ``run_apache_httpd_state: absent`` requires ``apt purge``
+          first; this dpkg conffile behavior is now documented in the ``run_apache_httpd_state``
+          description.
+
+          '
+        - '``run`` role - Duplicate ``name`` values in ``run_apache_httpd_vhosts_config``
+          now cause a validation error. Entries sharing a name wrote the same ``<name>.conf``
+          file with different content on every run, producing order-dependent results
+          and permanent non-idempotence. Uniqueness was already documented but not
+          enforced.
+
+          '
+        - '``run`` role - Platform-specific task files are now guaranteed to run before
+          the shared default tasks. The former single include loop did not preserve
+          that order with several platforms in one play: Ansible batches the includes
+          across hosts and the insertion order depends on when results arrive (non-deterministic),
+          so default tasks could run before platform-specific ones. The includes are
+          now two sequential tasks, which is a hard ordering barrier.
+
+          '
+        - '``run`` role - Stale enabled-vhost symlinks are now reaped. The unmanaged-vhost
+          cleanup used ``find`` with ``file_type: "file"``, which skipped the symlinks
+          in the vhosts-enabled directory; removing a vhost from ``run_apache_httpd_vhosts_config``
+          could leave the old enabled vhost active. The cleanup now matches symlinks
+          too.
+
+          '
+        - '``run`` role - Stale role-managed (symlink-type) module configs are now
+          removed even when ``run_apache_httpd_modules_enabled`` is emptied. The cleanup
+          was gated on there being enabled symlink modules, so emptying the list (after
+          modules had previously been managed) left the old module symlinks enabled.
+          The cleanup now runs whenever ``run_apache_httpd_modules_disable_unmanaged``
+          is true and only ever removes files whose name is part of the role''s module
+          map (``__run_apache_httpd_modules_map_resources``, symlink type).
+
+          '
+        - '``run`` role - The documentation of the ``unmanaged`` service state falsely
+          claimed the service "will not start at boot". The role leaves the service
+          completely alone in this state: both the running state and the boot (enablement)
+          state stay exactly as they are. The description now documents the real behavior.
+
+          '
+        - '``run`` role - The self-signed (snakeoil) certificate pair for the HTTPS
+          catch-all VirtualHost is now regenerated when either half is missing. Before,
+          only the certificate was checked: an existing certificate with a missing
+          key was left as-is, and Apache refused to start over the broken ``SSLCertificateKeyFile``
+          reference in the catch-all VirtualHost.
+
+          '
+        - '``run`` role - The service restart and reload handlers were gated only
+          on ``run_apache_httpd_service_state != ''unmanaged''``. With ``run_apache_httpd_service_state:
+          "disabled"`` a configuration change still notified them and, because handlers
+          run after the service management tasks, the restart started the just-stopped
+          unit again (and the reload failed on the inactive unit), leaving a running
+          service although the declared state is stopped. The handlers are now gated
+          on ``run_apache_httpd_service_state in [''enabled'', ''running'']``.
+
+          '
+        - "``run`` role - Uninstall (``run_apache_httpd_state: absent``) now removes\
+          \ managed vhost configs by absolute path from both the vhosts-available\
+          \ and vhosts-enabled directories. The removal list was built from bare filenames\
+          \ (e.g. ``example.com.conf``) that did not resolve, so on Debian/SUSE \u2014\
+          \ where the vhost directories are intentionally kept \u2014 managed vhost\
+          \ files and their enabled symlinks were left behind after uninstall.\n"
+        - '``run`` role - Uninstall now removes historical leftovers it previously
+          could not see: vhost config files carry an ownership marker and both vhost
+          directories are swept for it (covering vhosts renamed or de-listed since
+          deployment on Debian/SUSE, where the directories are kept), the role-managed
+          module symlinks are removed from ``mods-enabled`` on Debian, and the SUSE
+          ``/etc/sysconfig/apache2`` edits (``APACHE_MODULES`` and the cleared ``APACHE_*``
+          values) are restored from a copy of the pre-role file saved before the first
+          edit.
+
+          '
+      minor_changes:
+        - 'The Molecule ``default`` scenario now selects the test backend per platform
+          via a ``type`` key: ``podman`` (container, the default when omitted) or
+          ``libvirt`` (QEMU/KVM virtual machine from a vendor cloud image via a session
+          libvirt daemon, without root privileges). VM platforms allow tests containers
+          cannot cover; commented ``libvirt`` alternates for every platform are included
+          in ``molecule.yml``. ``molecule login`` now works through a per-instance
+          login command for both backends. See ``extensions/molecule/README.md`` for
+          requirements and usage.
+
+          '
+      release_summary: 'Release Date: 2026-07-30
+
+
+        Maintenance and bugfix release.
+
+        '
+    fragments:
+      - 1.2.0-release.yaml
+      - document-unmanaged-service-state.yml
+      - fix-disabled-vhost-entry.yml
+      - fix-handler-service-state-gate.yml
+      - fix-neutralize-comment-text.yml
+      - fix-platform-include-order.yml
+      - fix-snakeoil-halfpair.yml
+      - fix-stale-module-cleanup-emptied-list.yml
+      - fix-uninstall-historical-leftovers.yml
+      - fix-uninstall-managed-vhost-paths.yml
+      - fix-vhost-symlink-reaping.yml
+      - molecule-per-platform-test-backend.yaml
+      - refactor-lazy-merge.yml
+      - reject-duplicate-vhost-names.yml
+      - style-fqcn-molecule-shared.yml
+      - style-fqcn.yml
+    release_date: '2026-07-30'
   1.1.0:
     changes:
       minor_changes:
