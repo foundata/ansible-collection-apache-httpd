@@ -902,7 +902,7 @@
         src: "/etc/sysconfig/apache2.ansible-orig"
       register: __testing_uninstall_sysconfig_backup
       when:
-        - ansible_facts['os_family'] == 'Suse'
+        - (ansible_facts['os_family'] | ansible.builtin.lower) == 'suse'
 
 
     - name: "Molecule | Verify | Uninstall the role (run_apache_httpd_state: absent)"
@@ -988,7 +988,7 @@
         path: "/etc/apache2/mods-enabled/{{ item }}"
       register: __testing_uninstall_modlinks_after
       when:
-        - ansible_facts['os_family'] == 'Debian'
+        - (ansible_facts['os_family'] | ansible.builtin.lower) == 'debian'
       loop:
         - "ssl.load"
         - "headers.load"
@@ -1006,7 +1006,7 @@
         fail_msg: "Role-managed module symlinks survived the uninstall in mods-enabled."
         success_msg: "Role-managed module symlinks were removed from mods-enabled."
       when:
-        - ansible_facts['os_family'] == 'Debian'
+        - (ansible_facts['os_family'] | ansible.builtin.lower) == 'debian'
 
 
     - name: "Molecule | Verify | Read the sysconfig after uninstall (SUSE)"
@@ -1014,7 +1014,7 @@
         src: "/etc/sysconfig/apache2"
       register: __testing_uninstall_sysconfig_after
       when:
-        - ansible_facts['os_family'] == 'Suse'
+        - (ansible_facts['os_family'] | ansible.builtin.lower) == 'suse'
 
 
     - name: "Molecule | Verify | Stat the saved pre-role sysconfig after uninstall (SUSE)"
@@ -1022,7 +1022,7 @@
         path: "/etc/sysconfig/apache2.ansible-orig"
       register: __testing_uninstall_sysconfig_backup_after
       when:
-        - ansible_facts['os_family'] == 'Suse'
+        - (ansible_facts['os_family'] | ansible.builtin.lower) == 'suse'
 
 
     - name: "Molecule | Verify | Assert the pre-role APACHE_MODULES value was restored (SUSE)"
@@ -1039,7 +1039,7 @@
           (or left the saved pre-role copy behind).
         success_msg: "The pre-role APACHE_MODULES value was restored and the saved copy removed."
       when:
-        - ansible_facts['os_family'] == 'Suse'
+        - (ansible_facts['os_family'] | ansible.builtin.lower) == 'suse'
 
 
 ## Init-only merged variable evaluation
@@ -1111,7 +1111,7 @@
         fail_msg: "__run_apache_httpd_effective_snippet_settings did not include the RedHat-family platform overwrite."
         success_msg: "__run_apache_httpd_effective_snippet_settings includes the RedHat-family platform overwrite."
       when:
-        - ansible_facts['os_family'] == "RedHat"
+        - (ansible_facts['os_family'] | ansible.builtin.lower) == "redhat"
 
 
     - name: "Molecule | Verify | Assert effective modules list merged correctly"
