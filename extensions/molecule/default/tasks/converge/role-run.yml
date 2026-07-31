@@ -58,9 +58,12 @@
                     Require all denied
                 </Location>
             </VirtualHost>
-      run_apache_httpd_snippets_manage: true
-      run_apache_httpd_snippets_delete_unmanaged: true
-      run_apache_httpd_vhosts_delete_unmanaged: true
+      # Strings on purpose (as delivered by "-e var=true" command line
+      # extra-vars): the role has to coerce boolean arguments, not
+      # truthiness-evaluate them.
+      run_apache_httpd_snippets_manage: "true"
+      run_apache_httpd_snippets_delete_unmanaged: "true"
+      run_apache_httpd_vhosts_delete_unmanaged: "true"
       run_apache_httpd_modules_enabled:
         - ssl
         - headers

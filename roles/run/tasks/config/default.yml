@@ -92,7 +92,7 @@
 
 - name: "Config | Default | Generate self-signed certificate for HTTPS catch-all VirtualHost"
   when:
-    - run_apache_httpd_vhosts_default_manage
+    - run_apache_httpd_vhosts_default_manage | ansible.builtin.bool
     - (__run_apache_httpd_snakeoil_cert_path | ansible.builtin.default('') | ansible.builtin.length) > 0
     - (__run_apache_httpd_snakeoil_key_path | ansible.builtin.default('') | ansible.builtin.length) > 0
   block:
@@ -214,7 +214,7 @@
     tpl_main_config_baseline_manage: "{{ run_apache_httpd_main_config_baseline_manage }}"
     tpl_modules_enabled: "{{ __run_apache_httpd_effective_modules_enabled | ansible.builtin.default([]) }}"
   when:
-    - run_apache_httpd_main_config_baseline_manage
+    - run_apache_httpd_main_config_baseline_manage | ansible.builtin.bool
   notify:
     - "run_apache_httpd: validate configuration"
     - "run_apache_httpd: reload apache_httpd.service"
@@ -224,7 +224,7 @@
 
 - name: "Config | Default | Manage config snippets"
   when:
-    - run_apache_httpd_snippets_manage
+    - run_apache_httpd_snippets_manage | ansible.builtin.bool
   block:
 
     - name: "Config | Default | Ensure existence and permissions of snippet directories"
@@ -307,8 +307,8 @@
 
 - name: "Config | Default | Delete stale / unmanaged config snippets"
   when:
-    - run_apache_httpd_snippets_manage
-    - run_apache_httpd_snippets_delete_unmanaged
+    - run_apache_httpd_snippets_manage | ansible.builtin.bool
+    - run_apache_httpd_snippets_delete_unmanaged | ansible.builtin.bool
   block:
 
     - name: "Config | Default | Build list of expected config snippet filenames"
@@ -460,7 +460,7 @@
 
 - name: "Config | Default | Delete stale / unmanaged vhost configs"
   when:
-    - run_apache_httpd_vhosts_delete_unmanaged
+    - run_apache_httpd_vhosts_delete_unmanaged | ansible.builtin.bool
   block:
 
     - name: "Config | Default | Build list of expected vhost config filenames"
@@ -617,7 +617,7 @@
 
 - name: "Config | Default | Delete stale role-managed module configs (symlink type)"
   when:
-    - run_apache_httpd_modules_disable_unmanaged
+    - run_apache_httpd_modules_disable_unmanaged | ansible.builtin.bool
   block:
 
     - name: "Config | Default | Build the role-managed and currently-enabled module config filename sets (symlink type)"
