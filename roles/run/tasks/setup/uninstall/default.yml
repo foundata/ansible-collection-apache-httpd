@@ -18,7 +18,7 @@
 
 - name: "Setup | Uninstall | Remove drop-in config files (snippets, vhosts)"
   ansible.builtin.file:
-    path: "{{ item }}"
+    path: "{{ __run_apache_httpd_dropin_path_item }}"
     state: "absent"
   vars:
     __run_apache_httpd_managed_vhost_filenames: >-
@@ -53,6 +53,8 @@
   when:
     - __run_apache_httpd_paths_to_remove | ansible.builtin.length > 0
   loop: "{{ __run_apache_httpd_paths_to_remove }}"
+  loop_control:
+    loop_var: "__run_apache_httpd_dropin_path_item"
 
 
 # Historical vhosts (renamed or de-listed since deployment) cannot be derived
@@ -93,22 +95,25 @@
 
 - name: "Setup | Uninstall | Remove marker-managed vhost config files"
   ansible.builtin.file:
-    path: "{{ item }}"
+    path: "{{ __run_apache_httpd_marked_vhost_item }}"
     state: "absent"
   loop: "{{ __run_apache_httpd_uninstall_owned_result['stdout_lines'] | ansible.builtin.default([]) }}"
   loop_control:
-    label: "{{ item }}"
+    loop_var: "__run_apache_httpd_marked_vhost_item"
+    label: "{{ __run_apache_httpd_marked_vhost_item }}"
 
 
 - name: "Setup | Uninstall | Remove vhosts directories (non-Debian platforms)"
   ansible.builtin.file:
-    path: "{{ item }}"
+    path: "{{ __run_apache_httpd_vhosts_dir_item }}"
     state: "absent"
   when:
     - (ansible_facts['os_family'] | ansible.builtin.lower) not in ['debian', 'suse']
   loop:
     - "{{ __run_apache_httpd_config_service_dropin_vhosts_available_dir_path }}"
     - "{{ __run_apache_httpd_config_service_dropin_vhosts_enabled_dir_path }}"
+  loop_control:
+    loop_var: "__run_apache_httpd_vhosts_dir_item"
 
 
 - name: "Setup | Uninstall | Check if platform's original config backup exists"
@@ -158,7 +163,7 @@
 # (purge + reinstall).
 - name: "Setup | Uninstall | Remove role-managed module config symlinks (Debian)"
   ansible.builtin.file:
-    path: "{{ __run_apache_httpd_config_service_dropin_modules_enabled_dir_path }}/{{ item }}"
+    path: "{{ __run_apache_httpd_config_service_dropin_modules_enabled_dir_path }}/{{ __run_apache_httpd_module_symlink_item }}"
     state: "absent"
   when:
     - (ansible_facts['os_family'] | ansible.builtin.lower) == 'debian'
@@ -173,7 +178,8 @@
       | ansible.builtin.list
     }}
   loop_control:
-    label: "{{ item }}"
+    loop_var: "__run_apache_httpd_module_symlink_item"
+    label: "{{ __run_apache_httpd_module_symlink_item }}"
 
 
 # The config tasks overwrite APACHE_MODULES and clear several APACHE_* values
@@ -212,34 +218,38 @@
     - name: "Setup | Uninstall | Restore managed sysconfig lines to their pre-role values"
       ansible.builtin.lineinfile:
         path: "{{ __run_apache_httpd_sysconfig_path }}"
-        regexp: "^{{ item }}="
+        regexp: "^{{ __run_apache_httpd_sysconfig_restore_item }}="
         line: "{{ __run_apache_httpd_sysconfig_orig_line }}"
         state: "present"
       vars:
         __run_apache_httpd_sysconfig_orig_line: >-
           {{
             (__run_apache_httpd_sysconfig_backup_slurp['content'] | ansible.builtin.b64decode)
-            | ansible.builtin.regex_search('(?m)^' ~ item ~ '=.*$')
+            | ansible.builtin.regex_search('(?m)^' ~ __run_apache_httpd_sysconfig_restore_item ~ '=.*$')
           }}
       when:
         - __run_apache_httpd_sysconfig_orig_line is not ansible.builtin.none
       loop: "{{ __run_apache_httpd_sysconfig_managed_variables }}"
+      loop_control:
+        loop_var: "__run_apache_httpd_sysconfig_restore_item"
 
 
     - name: "Setup | Uninstall | Remove managed sysconfig lines absent from the pre-role file"
       ansible.builtin.lineinfile:
         path: "{{ __run_apache_httpd_sysconfig_path }}"
-        regexp: "^{{ item }}="
+        regexp: "^{{ __run_apache_httpd_sysconfig_remove_item }}="
         state: "absent"
       vars:
         __run_apache_httpd_sysconfig_orig_line: >-
           {{
             (__run_apache_httpd_sysconfig_backup_slurp['content'] | ansible.builtin.b64decode)
-            | ansible.builtin.regex_search('(?m)^' ~ item ~ '=.*$')
+            | ansible.builtin.regex_search('(?m)^' ~ __run_apache_httpd_sysconfig_remove_item ~ '=.*$')
           }}
       when:
         - __run_apache_httpd_sysconfig_orig_line is ansible.builtin.none
       loop: "{{ __run_apache_httpd_sysconfig_managed_variables }}"
+      loop_control:
+        loop_var: "__run_apache_httpd_sysconfig_remove_item"
 
 
     - name: "Setup | Uninstall | Remove the saved pre-role sysconfig"
