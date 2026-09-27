@@ -18,7 +18,9 @@ documented there.
 
 ## Getting started
 
-Clone the repository and work from its root:
+Clone a repository listed on the
+[source page](https://foundata.com/en/projects/ansible-collection-apache-httpd/#source);
+the commands below use GitHub as an example. Work from the repository root:
 
 ```sh
 git clone https://github.com/foundata/ansible-collection-apache-httpd.git
