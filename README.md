@@ -1,5 +1,10 @@
 # Ansible collection: `foundata.apache_httpd`
 
+<!--
+SPDX-FileCopyrightText: foundata GmbH <https://foundata.com>
+SPDX-License-Identifier: GPL-3.0-or-later
+-->
+
 This repository contains the `foundata.apache_httpd` Ansible Collection.
 
 It provides resources to manage and use the

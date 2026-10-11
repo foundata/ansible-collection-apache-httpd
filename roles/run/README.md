@@ -1,5 +1,10 @@
 # Ansible role: `foundata.apache_httpd.run`
 
+<!--
+SPDX-FileCopyrightText: foundata GmbH <https://foundata.com>
+SPDX-License-Identifier: GPL-3.0-or-later
+-->
+
 The `foundata.apache_httpd.run` Ansible role (part of the `foundata.apache_httpd` Ansible collection). It provides automated installation, configuration management, and hardening of [Apache HTTP Server](https://httpd.apache.org/) across major Linux distributions.
 
 

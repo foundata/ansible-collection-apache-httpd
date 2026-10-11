@@ -3,6 +3,9 @@
 
   Unlike other servers (like NGINX which separates events{} and http{} blocks),
   Apache HTTPD uses a flat global context for all server-wide directives.
+
+SPDX-FileCopyrightText: foundata GmbH <https://foundata.com>
+SPDX-License-Identifier: GPL-3.0-or-later
 -#}
 {%- from '_apache_httpd_macros.j2' import render_directives -%}
 {%- set main_config_block = tpl_main_config_block | ansible.builtin.default('') -%}

@@ -1,6 +1,9 @@
 {#-
   Render Apache HTTPD Listen directives.
   This file is included by the main config via "Include ports.conf".
+
+SPDX-FileCopyrightText: foundata GmbH <https://foundata.com>
+SPDX-License-Identifier: GPL-3.0-or-later
 -#}
 {%- set main_config_baseline_manage = tpl_main_config_baseline_manage | ansible.builtin.default(true) -%}
 {%- set modules_enabled = tpl_modules_enabled | ansible.builtin.default([]) -%}
