@@ -7,7 +7,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
 -#}
 {%- set main_config_baseline_manage = tpl_main_config_baseline_manage | ansible.builtin.default(true) -%}
 {%- set modules_enabled = tpl_modules_enabled | ansible.builtin.default([]) -%}
-# {{ ansible_managed }}
+# {{ tpl_managed }}
 
 {% if main_config_baseline_manage == true %}
 Listen 80

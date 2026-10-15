@@ -1,0 +1,17 @@
+---
+minor_changes:
+  - >-
+    Add role-prefixed handler topics and use them for internal notifications.
+    Retain the previous topics as migration aliases until version 2.0.0.
+  - >-
+    Add the handler topic run_apache_httpd_validate_configuration
+    as the replacement for "run_apache_httpd: validate configuration".
+  - >-
+    Add the handler topic run_apache_httpd_restart_apache_httpd
+    as the replacement for "run_apache_httpd: restart apache_httpd.service".
+  - >-
+    Add the handler topic run_apache_httpd_reload_apache_httpd
+    as the replacement for "run_apache_httpd: reload apache_httpd.service".
+  - >-
+    Add the handler topic run_apache_httpd_reload_systemd_daemon
+    as the replacement for "run_apache_httpd: systemd daemon-reload".

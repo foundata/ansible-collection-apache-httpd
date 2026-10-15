@@ -4,22 +4,21 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 ---
-
 - name: "Handlers | Validate Apache HTTPD configuration"
   ansible.builtin.command:
     argv:
       - "/bin/sh"
       - "-c"
       - "{{ __run_apache_httpd_config_test_cmd }}"
-  register: __run_apache_httpd_validation_result
   changed_when:
     - false
   failed_when:
     - __run_apache_httpd_validation_result is ansible.builtin.failed
+  register: __run_apache_httpd_validation_result
   listen:
+    - "run_apache_httpd_validate_configuration"
+    # Migration alias; remove in 2.0.0.
     - "run_apache_httpd: validate configuration"
-
-
 - name: "Handlers | Apache HTTPD service restart"
   ansible.builtin.systemd_service:
     name: "{{ __run_apache_httpd_apache_httpd_servicename }}"
@@ -27,9 +26,9 @@
   when:
     - run_apache_httpd_service_state in ['enabled', 'running']
   listen:
+    - "run_apache_httpd_restart_apache_httpd"
+    # Migration alias; remove in 2.0.0.
     - "run_apache_httpd: restart apache_httpd.service"
-
-
 - name: "Handlers | Apache HTTPD service reload"
   ansible.builtin.systemd_service:
     name: "{{ __run_apache_httpd_apache_httpd_servicename }}"
@@ -37,11 +36,13 @@
   when:
     - run_apache_httpd_service_state in ['enabled', 'running']
   listen:
+    - "run_apache_httpd_reload_apache_httpd"
+    # Migration alias; remove in 2.0.0.
     - "run_apache_httpd: reload apache_httpd.service"
-
-
 - name: "Handlers | systemd daemon-reload"
   ansible.builtin.systemd_service:
     daemon_reload: true
   listen:
+    - "run_apache_httpd_reload_systemd_daemon"
+    # Migration alias; remove in 2.0.0.
     - "run_apache_httpd: systemd daemon-reload"
