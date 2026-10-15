@@ -5,7 +5,11 @@ SPDX-FileCopyrightText: foundata GmbH <https://foundata.com>
 SPDX-License-Identifier: GPL-3.0-or-later
 -->
 
-The `foundata.apache_httpd.run` Ansible role (part of the `foundata.apache_httpd` Ansible collection). It provides automated installation, configuration management, and hardening of [Apache HTTP Server](https://httpd.apache.org/) across major Linux distributions.
+The `foundata.apache_httpd.run` Ansible role (part of the
+`foundata.apache_httpd` Ansible collection). It provides automated installation,
+configuration management, and hardening of
+[Apache HTTP Server](https://httpd.apache.org/) across major Linux
+distributions.
 
 
 
@@ -57,21 +61,44 @@ The `foundata.apache_httpd.run` Ansible role (part of the `foundata.apache_httpd
 
 Main features:
 
-* **VirtualHost management** via `sites-available/` and `sites-enabled/` (Debian-style symlink pattern enforced on all platforms, including Red Hat and SUSE) with optional cleanup of unmanaged files.
-* **MPM selection:** choose between `event`, `worker`, and `prefork` via a single variable; the role handles the platform-specific mechanism (Debian: `mods-enabled/` symlinks, Red Hat: `conf.modules.d/00-mpm.conf`, SUSE: `APACHE_MPM` sysconfig variable).
-* **Module management:** enable modules by short name, the role installs packages and activates modules automatically with cross-platform support (Debian: symlinks, Red Hat: package-managed `conf.modules.d/` files, SUSE: `APACHE_MODULES` sysconfig variable).
-* Layered configuration merge: production-ready internal defaults (see [`__run_apache_httpd_main_directives_defaults`](./vars/main.yml) for the complete list) and user settings are combined automatically. User-provided values always take precedence.
-* **Hardened TLS baseline** following the [Mozilla "Intermediate" TLS profile (Guideline v6.0)](https://ssl-config.mozilla.org/#server=apache&config=intermediate&hsts=1&ocsp=1&guideline=6.0):
-  * Post-quantum key exchange (`X25519MLKEM768`) on platforms with OpenSSL >= 3.5, automatic fallback to classical curves on older platforms.
-  * Ships [RFC 7919](https://www.rfc-editor.org/rfc/rfc7919) ffdhe3072 DH parameters; no manual `openssl dhparam` step needed.
-  * OCSP stapling, session resumption, and ECDHE-only cipher suites out of the box.
-* **Reusable, curated config snippets** for common tasks, ready to `Include` in your VirtualHost configs:
-  * `global/tls-baseline.conf` -- TLS/SSL hardening (see above).
-  * `vhost/headers-security.conf` -- security headers (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`).
-  * `vhost/headers-hsts.conf` -- [HTTP Strict Transport Security](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security) with configurable `max-age`, `includeSubDomains`, and `preload`.
-  * `directory/cache-static.conf` -- long-lived caching for static assets (`Cache-Control: public, immutable`).
-  * `directory/php-fpm.conf` -- FastCGI proxy for PHP-FPM via `mod_proxy_fcgi` (Unix socket or TCP).
-* **Hardened catch-all `<VirtualHost>`** that denies all requests / rejects unknown TLS handshakes, preventing unintended content exposure for unknown hostnames.
+- **VirtualHost management** via `sites-available/` and `sites-enabled/`
+  (Debian-style symlink pattern enforced on all platforms, including Red Hat and
+  SUSE) with optional cleanup of unmanaged files.
+- **MPM selection:** choose between `event`, `worker`, and `prefork` via a
+  single variable; the role handles the platform-specific mechanism (Debian:
+  `mods-enabled/` symlinks, Red Hat: `conf.modules.d/00-mpm.conf`, SUSE:
+  `APACHE_MPM` sysconfig variable).
+- **Module management:** enable modules by short name, the role installs
+  packages and activates modules automatically with cross-platform support
+  (Debian: symlinks, Red Hat: package-managed `conf.modules.d/` files, SUSE:
+  `APACHE_MODULES` sysconfig variable).
+- Layered configuration merge: production-ready internal defaults (see
+  [`__run_apache_httpd_main_directives_defaults`](./vars/main.yml) for the
+  complete list) and user settings are combined automatically. User-provided
+  values always take precedence.
+- **Hardened TLS baseline** following the
+  [Mozilla "Intermediate" TLS profile (Guideline v6.0)](https://ssl-config.mozilla.org/#server=apache&config=intermediate&hsts=1&ocsp=1&guideline=6.0):
+  - Post-quantum key exchange (`X25519MLKEM768`) on platforms with OpenSSL >=
+    3.5, automatic fallback to classical curves on older platforms.
+  - Ships [RFC 7919](https://www.rfc-editor.org/rfc/rfc7919) ffdhe3072 DH
+    parameters; no manual `openssl dhparam` step needed.
+  - OCSP stapling, session resumption, and ECDHE-only cipher suites out of the
+    box.
+- **Reusable, curated config snippets** for common tasks, ready to `Include` in
+  your VirtualHost configs:
+  - `global/tls-baseline.conf` -- TLS/SSL hardening (see above).
+  - `vhost/headers-security.conf` -- security headers (`X-Content-Type-Options`,
+    `X-Frame-Options`, `Referrer-Policy`).
+  - `vhost/headers-hsts.conf` --
+    [HTTP Strict Transport Security](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security)
+    with configurable `max-age`, `includeSubDomains`, and `preload`.
+  - `directory/cache-static.conf` -- long-lived caching for static assets
+    (`Cache-Control: public, immutable`).
+  - `directory/php-fpm.conf` -- FastCGI proxy for PHP-FPM via `mod_proxy_fcgi`
+    (Unix socket or TCP).
+- **Hardened catch-all `<VirtualHost>`** that denies all requests / rejects
+  unknown TLS handshakes, preventing unintended content exposure for unknown
+  hostnames.
 
 
 
@@ -94,7 +121,8 @@ Installation with automatic upgrade:
         run_apache_httpd_autoupgrade: true
 ```
 
-Installation with a TLS-enabled site, security headers, HSTS, and custom snippet settings:
+Installation with a TLS-enabled site, security headers, HSTS, and custom snippet
+settings:
 
 ```yaml
 ---
@@ -216,7 +244,9 @@ Uninstall:
         run_apache_httpd_state: "absent"
 ```
 
-On SELinux-enabled systems (RHEL, Fedora, AlmaLinux, CentOS Stream), Apache may need additional permissions for network connections (e.g. reverse proxying to upstream backends). Add this to your playbook before including the role:
+On SELinux-enabled systems (RHEL, Fedora, AlmaLinux, CentOS Stream), Apache may
+need additional permissions for network connections (e.g. reverse proxying to
+upstream backends). Add this to your playbook before including the role:
 
 ```yaml
 - name: "Allow Apache to make network connections (SELinux)"
@@ -234,13 +264,18 @@ On SELinux-enabled systems (RHEL, Fedora, AlmaLinux, CentOS Stream), Apache may 
 
 It might be useful and faster to only call parts of the role by using tags:
 
-- `run_apache_httpd_setup`: Manage basic resources, such as packages or service users.
-- `run_apache_httpd_config`: Manage settings, such as adapting or creating configuration files.
-- `run_apache_httpd_service`: Manage services and daemons, such as running states and service boot configurations.
+- `run_apache_httpd_setup`: Manage basic resources, such as packages or service
+  users.
+- `run_apache_httpd_config`: Manage settings, such as adapting or creating
+  configuration files.
+- `run_apache_httpd_service`: Manage services and daemons, such as running
+  states and service boot configurations.
 
-There are also tags that are generally not intended to be called directly but are included for completeness and to cover edge cases:
+There are also tags that are generally not intended to be called directly but
+are included for completeness and to cover edge cases:
 
-- `run_apache_httpd_always`, `always`: Tasks needed by the role itself for internal role setup and the Ansible environment.
+- `run_apache_httpd_always`, `always`: Tasks needed by the role itself for
+  internal role setup and the Ansible environment.
 
 
 <!-- ANSIBLE DOCSMITH MAIN START -->
@@ -929,7 +964,8 @@ See `dependencies` in [`meta/main.yml`](./meta/main.yml).
 
 ## Compatibility<a id="compatibility"></a>
 
-See `min_ansible_version` in [`meta/main.yml`](./meta/main.yml) and `__run_apache_httpd_supported_platforms` in [`vars/main.yml`](./vars/main.yml).
+See `min_ansible_version` in [`meta/main.yml`](./meta/main.yml) and
+`__run_apache_httpd_supported_platforms` in [`vars/main.yml`](./vars/main.yml).
 
 
 
