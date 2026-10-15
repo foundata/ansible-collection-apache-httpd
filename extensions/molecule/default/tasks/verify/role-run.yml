@@ -1,3 +1,4 @@
+---
 # Check collection role "run" outcomes.
 #
 # SPDX-FileCopyrightText: foundata GmbH <https://foundata.com>
@@ -8,7 +9,6 @@
     name: "foundata.apache_httpd.run"
     tasks_from: "init"
     public: true
-
 
 ## Preparation
 
@@ -31,7 +31,6 @@
     path: "{{ __run_apache_httpd_config_service_file_path }}"
   register: __testing_config_file
 
-
 - name: "Molecule | Verify | Assert Apache HTTPD main configuration file exists"
   ansible.builtin.assert:
     that:
@@ -51,7 +50,6 @@
     path: "{{ __run_apache_httpd_config_service_file_distbackup_path }}"
   register: __testing_distbackup_file
 
-
 - name: "Molecule | Verify | Assert Apache HTTPD distribution backup configuration file exists"
   ansible.builtin.assert:
     that:
@@ -68,7 +66,6 @@
   ansible.builtin.slurp:
     src: "{{ __run_apache_httpd_config_service_file_distbackup_path }}"
   register: __testing_distbackup_content
-
 
 - name: "Molecule | Verify | Assert Apache HTTPD distribution backup contains backup notice comment"
   ansible.builtin.assert:
@@ -95,7 +92,6 @@
     var: ansible_facts['services']
     verbosity: 3
 
-
 - name: "Molecule | Verify | Assert Apache HTTPD service is running"
   ansible.builtin.assert:
     that:
@@ -104,14 +100,12 @@
     fail_msg: "Apache HTTPD service '{{ __run_apache_httpd_apache_httpd_servicename }}' is not running"
     success_msg: "Apache HTTPD service '{{ __run_apache_httpd_apache_httpd_servicename }}' is running"
 
-
 ## Ports configuration file
 
 - name: "Molecule | Verify | Check if ports configuration file exists"
   ansible.builtin.stat:
     path: "{{ __run_apache_httpd_config_service_ports_file_path }}"
   register: __testing_ports_file
-
 
 - name: "Molecule | Verify | Assert ports configuration file exists"
   ansible.builtin.assert:
@@ -132,15 +126,14 @@
     - (run_apache_httpd_modules_enabled | ansible.builtin.default([]) | ansible.builtin.length) > 0
     - (ansible_facts['os_family'] | ansible.builtin.lower) == 'debian'
   block:
-
     - name: "Molecule | Verify | Build flat list of expected module conf_files entries"
       ansible.builtin.set_fact:
         __testing_module_conf_entries: >-
           {{
             run_apache_httpd_modules_enabled
             | ansible.builtin.default([])
-            | ansible.builtin.select('in', __run_apache_httpd_modules_map_resources.keys() | ansible.builtin.list)
-            | ansible.builtin.map('extract', __run_apache_httpd_modules_map_resources)
+            | ansible.builtin.select('ansible.builtin.in', __run_apache_httpd_modules_map_resources.keys() | ansible.builtin.list)
+            | ansible.builtin.map('ansible.builtin.extract', __run_apache_httpd_modules_map_resources)
             | ansible.builtin.map(attribute='conf_files')
             | ansible.builtin.flatten
             | ansible.builtin.unique(attribute='name')
@@ -151,14 +144,13 @@
     - name: "Molecule | Verify | Check module config files in modules-enabled"
       ansible.builtin.stat:
         path: "{{ __run_apache_httpd_config_service_dropin_modules_enabled_dir_path }}/{{ item['name'] }}"
-      register: __testing_module_enabled_files
       when:
         - (__testing_module_conf_entries | ansible.builtin.length) > 0
       loop: "{{ __testing_module_conf_entries }}"
       loop_control:
         label: "{{ item['name'] }}"
 
-
+      register: __testing_module_enabled_files
     - name: "Molecule | Verify | Assert module config files exist in modules-enabled with correct type"
       ansible.builtin.assert:
         that:
@@ -179,14 +171,12 @@
       loop_control:
         label: "{{ item['item']['name'] | ansible.builtin.default('n/a') }}"
 
-
 ## VHost directories
 
 - name: "Molecule | Verify | Check if vhosts-available directory exists"
   ansible.builtin.stat:
     path: "{{ __run_apache_httpd_config_service_dropin_vhosts_available_dir_path }}"
   register: __testing_vhosts_available_dir
-
 
 - name: "Molecule | Verify | Assert vhosts-available directory exists"
   ansible.builtin.assert:
@@ -208,7 +198,6 @@
     path: "{{ __run_apache_httpd_config_service_dropin_vhosts_enabled_dir_path }}"
   register: __testing_vhosts_enabled_dir
 
-
 - name: "Molecule | Verify | Assert vhosts-enabled directory exists"
   ansible.builtin.assert:
     that:
@@ -229,12 +218,11 @@
 - name: "Molecule | Verify | Check vhost config files exist in sites-available"
   ansible.builtin.stat:
     path: "{{ __run_apache_httpd_config_service_dropin_vhosts_available_dir_path }}/{{ item['name'] }}.conf"
-  register: __testing_vhost_available_files
   loop: "{{ run_apache_httpd_vhosts_config | ansible.builtin.default([]) }}"
   loop_control:
     label: "{{ item['name'] }}.conf"
 
-
+  register: __testing_vhost_available_files
 - name: "Molecule | Verify | Assert vhost config files exist in sites-available"
   ansible.builtin.assert:
     that:
@@ -248,11 +236,9 @@
   loop_control:
     label: "{{ item['item']['name'] | ansible.builtin.default('n/a') }}.conf"
 
-
 - name: "Molecule | Verify | Check enabled vhost symlinks exist in sites-enabled"
   ansible.builtin.stat:
     path: "{{ __run_apache_httpd_config_service_dropin_vhosts_enabled_dir_path }}/{{ item['name'] }}.conf"
-  register: __testing_vhost_enabled_files
   loop: >-
     {{
       (run_apache_httpd_vhosts_config | ansible.builtin.default([]))
@@ -263,7 +249,7 @@
   loop_control:
     label: "{{ item['name'] }}.conf"
 
-
+  register: __testing_vhost_enabled_files
 - name: "Molecule | Verify | Assert enabled vhost symlinks exist in sites-enabled"
   ansible.builtin.assert:
     that:
@@ -279,7 +265,6 @@
   loop_control:
     label: "{{ item['item']['name'] | ansible.builtin.default('n/a') }}.conf"
 
-
 ## HTTP connectivity: example.com
 
 - name: "Molecule | Verify | Connect to example.com on HTTP port 80"
@@ -289,7 +274,6 @@
       Host: "example.com"
     return_content: true
   register: __testing_http_example_result
-
 
 - name: "Molecule | Verify | Assert example.com HTTP response contains expected content and status"
   ansible.builtin.assert:
@@ -332,7 +316,6 @@
     - __testing_https_example_status is ansible.builtin.failed
   register: __testing_https_example_status
 
-
 - name: "Molecule | Verify | Connect to example.com on HTTPS port 443 (body)"
   # The command module is used intentionally:
   # see the status check task above for the reasoning.
@@ -351,7 +334,6 @@
   failed_when:
     - __testing_https_example_body is ansible.builtin.failed
   register: __testing_https_example_body
-
 
 - name: "Molecule | Verify | Assert example.com HTTPS response contains expected content and status"
   ansible.builtin.assert:
@@ -379,7 +361,6 @@
       - 403
   register: __testing_catchall_http_result
 
-
 - name: "Molecule | Verify | Assert HTTP catch-all returns 403 Forbidden"
   ansible.builtin.assert:
     that:
@@ -401,7 +382,6 @@
     return_content: false
   register: __testing_headers_result
 
-
 - name: "Molecule | Verify | Assert response headers do not contain Apache version information"
   ansible.builtin.assert:
     that:
@@ -418,7 +398,6 @@
 - name: "Molecule | Verify | Check managed snippet files exist"
   ansible.builtin.stat:
     path: "{{ __run_apache_httpd_config_service_dropin_snippets_dir_path }}/{{ item }}"
-  register: __testing_snippet_files
   loop:
     - "global/tls-baseline.conf"
     - "vhost/headers-security.conf"
@@ -426,7 +405,7 @@
     - "directory/cache-static.conf"
     - "directory/php-fpm.conf"
 
-
+  register: __testing_snippet_files
 - name: "Molecule | Verify | Assert all managed snippet files exist"
   ansible.builtin.assert:
     that:
@@ -440,14 +419,12 @@
   loop_control:
     label: "{{ item['item'] }}"
 
-
 ## DH parameters file deployed (RFC 7919 ffdhe3072)
 
 - name: "Molecule | Verify | Check DH parameters file exists at configured path"
   ansible.builtin.stat:
     path: "{{ __run_apache_httpd_effective_snippet_settings['tls-baseline']['dhparam_path'] }}"
   register: __testing_dhparam_file
-
 
 - name: "Molecule | Verify | Assert DH parameters file exists and has correct permissions"
   ansible.builtin.assert:
@@ -476,7 +453,6 @@
     - false
   register: __testing_apache_config_test
 
-
 - name: "Molecule | Verify | Assert config test succeeded (configuration is valid)"
   ansible.builtin.assert:
     that:
@@ -495,11 +471,9 @@
     src: "{{ __run_apache_httpd_config_service_file_path }}"
   register: __testing_main_config_content
 
-
 - name: "Molecule | Verify | Decode main configuration file content"
   ansible.builtin.set_fact:
     __testing_main_config: "{{ __testing_main_config_content['content'] | ansible.builtin.b64decode }}"
-
 
 - name: "Molecule | Verify | Assert baseline directives are present in main config"
   ansible.builtin.assert:
@@ -523,11 +497,9 @@
     src: "{{ __run_apache_httpd_config_service_dropin_snippets_dir_path }}/global/tls-baseline.conf"
   register: __testing_tls_snippet_content
 
-
 - name: "Molecule | Verify | Decode TLS baseline snippet content"
   ansible.builtin.set_fact:
     __testing_tls_snippet: "{{ __testing_tls_snippet_content['content'] | ansible.builtin.b64decode }}"
-
 
 - name: "Molecule | Verify | Assert TLS baseline directives are present in snippet"
   ansible.builtin.assert:
@@ -560,7 +532,6 @@
   changed_when:
     - false
   register: __testing_https_headers
-
 
 - name: "Molecule | Verify | Assert security response headers are present"
   ansible.builtin.assert:
@@ -605,7 +576,6 @@
     - false
   register: __testing_static_headers
 
-
 - name: "Molecule | Verify | Assert Cache-Control header is present for static assets"
   ansible.builtin.assert:
     that:
@@ -624,14 +594,12 @@
 # nothing.
 
 - name: "Molecule | Verify | Validate stale module cleanup on emptied list (Debian)"
-  when:
-    - (ansible_facts['os_family'] | ansible.builtin.lower) == 'debian'
   vars:
     __testing_managed_module_filenames: >-
       {{
         (run_apache_httpd_modules_enabled | ansible.builtin.default([]))
-        | ansible.builtin.select('in', __run_apache_httpd_modules_map_resources.keys() | ansible.builtin.list)
-        | ansible.builtin.map('extract', __run_apache_httpd_modules_map_resources)
+        | ansible.builtin.select('ansible.builtin.in', __run_apache_httpd_modules_map_resources.keys() | ansible.builtin.list)
+        | ansible.builtin.map('ansible.builtin.extract', __run_apache_httpd_modules_map_resources)
         | ansible.builtin.map(attribute='conf_files')
         | ansible.builtin.flatten
         | ansible.builtin.selectattr('type', 'ansible.builtin.equalto', 'symlink')
@@ -639,22 +607,21 @@
         | ansible.builtin.unique
         | ansible.builtin.list
       }}
+  when:
+    - (ansible_facts['os_family'] | ansible.builtin.lower) == 'debian'
   block:
-
     - name: "Molecule | Verify | Stat role-managed module configs before emptying the list"
       ansible.builtin.stat:
         path: "{{ __run_apache_httpd_config_service_dropin_modules_enabled_dir_path }}/{{ item }}"
-      register: __testing_module_before
       loop: "{{ __testing_managed_module_filenames }}"
 
-
+      register: __testing_module_before
     - name: "Molecule | Verify | Assert at least one role-managed module config exists before"
       ansible.builtin.assert:
         that:
           - (__testing_module_before['results'] | ansible.builtin.selectattr('stat.exists') | ansible.builtin.list | ansible.builtin.length) > 0
         fail_msg: "No role-managed module configs found before test; setup invalid (managed={{ __testing_managed_module_filenames }})."
         success_msg: "Role-managed module configs exist before emptying the list."
-
 
     - name: "Molecule | Verify | Re-run role with an empty module list (disable_unmanaged)"
       ansible.builtin.include_role:
@@ -663,21 +630,18 @@
         run_apache_httpd_modules_enabled: []
         run_apache_httpd_modules_disable_unmanaged: true
 
-
     - name: "Molecule | Verify | Stat role-managed module configs after emptying the list"
       ansible.builtin.stat:
         path: "{{ __run_apache_httpd_config_service_dropin_modules_enabled_dir_path }}/{{ item }}"
-      register: __testing_module_after
       loop: "{{ __testing_managed_module_filenames }}"
 
-
+      register: __testing_module_after
     - name: "Molecule | Verify | Assert role-managed module configs were removed"
       ansible.builtin.assert:
         that:
           - (__testing_module_after['results'] | ansible.builtin.selectattr('stat.exists') | ansible.builtin.list | ansible.builtin.length) == 0
         fail_msg: "Stale module configs remained after emptying run_apache_httpd_modules_enabled."
         success_msg: "Emptying run_apache_httpd_modules_enabled removed the role-managed module configs."
-
 
 ## Migration: pre-existing, unmanaged vhost configs (brownfield)
 #
@@ -702,7 +666,6 @@
     __testing_managed_vhost: >-
       {{ __run_apache_httpd_config_service_dropin_vhosts_available_dir_path }}/example.com.conf
   block:
-
     - name: "Molecule | Verify | Plant a pre-existing, unmanaged vhost config"
       ansible.builtin.copy:
         content: |
@@ -717,19 +680,16 @@
         group: "{{ __run_apache_httpd_config_service_dropin_vhosts_available_dir_group }}"
         mode: "u=rw,g=r,o=r" # 0644
 
-
     - name: "Molecule | Verify | Re-run the role with unmanaged vhost deletion disabled"
       ansible.builtin.include_role:
         name: "foundata.apache_httpd.run"
       vars:
         run_apache_httpd_vhosts_delete_unmanaged: false
 
-
     - name: "Molecule | Verify | Stat the unmanaged vhost after the run with deletion disabled"
       ansible.builtin.stat:
         path: "{{ __testing_unmanaged_vhost }}"
       register: __testing_unmanaged_vhost_kept
-
 
     - name: "Molecule | Verify | Assert the unmanaged vhost survives when deletion is disabled"
       ansible.builtin.assert:
@@ -750,7 +710,6 @@
       vars:
         run_apache_httpd_vhosts_delete_unmanaged: true
 
-
     - name: "Molecule | Verify | Stat the unmanaged and a managed vhost after the run with deletion enabled"
       ansible.builtin.stat:
         path: "{{ item }}"
@@ -758,7 +717,6 @@
         - "{{ __testing_unmanaged_vhost }}"
         - "{{ __testing_managed_vhost }}"
       register: __testing_unmanaged_vhost_reaped
-
 
     - name: "Molecule | Verify | Assert the unmanaged vhost is removed while the managed one stays"
       ansible.builtin.assert:
@@ -778,8 +736,7 @@
 # installed and its configuration is valid, so they do not run at play end after
 # the uninstall regression below has removed the package and its config.
 - name: "Molecule | Verify | Flush handlers before the uninstall regression"
-  ansible.builtin.meta: flush_handlers
-
+  ansible.builtin.meta: "flush_handlers"
 
 ## Regression: a half-missing snakeoil pair is regenerated as a whole
 #
@@ -793,25 +750,21 @@
     path: "{{ __run_apache_httpd_snakeoil_key_path }}"
     state: "absent"
 
-
 - name: "Molecule | Verify | Snakeoil pair: re-run the foundata.apache_httpd.run role"
   ansible.builtin.include_role:
     name: "foundata.apache_httpd.run"
 
-
 - name: "Molecule | Verify | Snakeoil pair: run the notified handlers"
   ansible.builtin.meta: "flush_handlers"
-
 
 - name: "Molecule | Verify | Snakeoil pair: get the status of both halves"
   ansible.builtin.stat:
     path: "{{ item }}"
-  register: __testing_snakeoil_stat
   loop:
     - "{{ __run_apache_httpd_snakeoil_cert_path }}"
     - "{{ __run_apache_httpd_snakeoil_key_path }}"
 
-
+  register: __testing_snakeoil_stat
 - name: "Molecule | Verify | Snakeoil pair: assert the pair was regenerated as a whole"
   ansible.builtin.assert:
     that:
@@ -827,7 +780,6 @@
       catch-all VirtualHost references both files, Apache would refuse to start.
     success_msg: "A snakeoil pair with a missing key is regenerated as a whole (key 0600, root-owned)."
 
-
 ## Regression: uninstall removes managed vhost files/symlinks by absolute path
 #
 # This block runs LAST because it uninstalls the role. It guards the uninstall
@@ -842,16 +794,14 @@
     __testing_uninstall_vhost_available: "{{ __run_apache_httpd_config_service_dropin_vhosts_available_dir_path }}/example.com.conf"
     __testing_uninstall_vhost_enabled: "{{ __run_apache_httpd_config_service_dropin_vhosts_enabled_dir_path }}/example.com.conf"
   block:
-
     - name: "Molecule | Verify | Stat managed vhost file and symlink before uninstall"
       ansible.builtin.stat:
         path: "{{ item }}"
-      register: __testing_uninstall_before
       loop:
         - "{{ __testing_uninstall_vhost_available }}"
         - "{{ __testing_uninstall_vhost_enabled }}"
 
-
+      register: __testing_uninstall_before
     - name: "Molecule | Verify | Assert managed vhost file and symlink exist before uninstall"
       ansible.builtin.assert:
         that:
@@ -860,7 +810,6 @@
         fail_msg: "Managed vhost file/symlink missing before uninstall; test setup invalid."
         success_msg: "Managed vhost file and enabled symlink exist before uninstall."
 
-
     # Simulate a vhost that was renamed since deployment: the marker-carrying
     # file exists on disk but is absent from run_apache_httpd_vhosts_config,
     # so only the marker sweep can find it during uninstall.
@@ -868,24 +817,21 @@
       ansible.builtin.copy:
         src: "{{ __testing_uninstall_vhost_available }}"
         dest: "{{ __run_apache_httpd_config_service_dropin_vhosts_available_dir_path }}/renamed-leftover.conf"
+        mode: "preserve"  # noqa: foundata-file-mode
         remote_src: true
-        mode: "preserve"
-
-
     - name: "Molecule | Verify | Plant the matching enabled symlink for the historical vhost"
       ansible.builtin.file:
-        src: "{{ __run_apache_httpd_config_service_dropin_vhosts_available_dir_path }}/renamed-leftover.conf"
-        dest: "{{ __run_apache_httpd_config_service_dropin_vhosts_enabled_dir_path }}/renamed-leftover.conf"
         state: "link"
 
-
-    # An administrator's own vhost file (no ownership marker). On Debian and
-    # SUSE the vhost directories are stock directories the role must not
-    # remove, so the file has to survive the marker sweep. On Red Hat
-    # platforms the role created the directories itself and removes them
-    # completely - nothing to plant there. The content mentions the marker as
-    # a substring on purpose: ownership requires the exact marker line, a mere
-    # mention (e.g. quoted in a comment) must not get the file deleted.
+        # An administrator's own vhost file (no ownership marker). On Debian and
+        # SUSE the vhost directories are stock directories the role must not
+        # remove, so the file has to survive the marker sweep. On Red Hat
+        # platforms the role created the directories itself and removes them
+        # completely - nothing to plant there. The content mentions the marker as
+        # a substring on purpose: ownership requires the exact marker line, a mere
+        # mention (e.g. quoted in a comment) must not get the file deleted.
+        dest: "{{ __run_apache_httpd_config_service_dropin_vhosts_enabled_dir_path }}/renamed-leftover.conf"
+        src: "{{ __run_apache_httpd_config_service_dropin_vhosts_available_dir_path }}/renamed-leftover.conf"
     - name: "Molecule | Verify | Plant an administrator-owned vhost file without the marker"
       ansible.builtin.copy:
         dest: "{{ __run_apache_httpd_config_service_dropin_vhosts_available_dir_path }}/admin-own.conf"
@@ -895,35 +841,31 @@
           # role-owned; this one merely quotes that marker.
         owner: "root"
         group: "root"
-        mode: "u=rw,g=r,o=r"
+        mode: "u=rw,g=r,o=r" # 0644
       when:
         - (ansible_facts['os_family'] | ansible.builtin.lower) in ['debian', 'suse']
-
 
     - name: "Molecule | Verify | Read the saved pre-role sysconfig before uninstall (SUSE)"
       ansible.builtin.slurp:
         src: "/etc/sysconfig/apache2.ansible-orig"
-      register: __testing_uninstall_sysconfig_backup
       when:
         - (ansible_facts['os_family'] | ansible.builtin.lower) == 'suse'
 
-
+      register: __testing_uninstall_sysconfig_backup
     - name: "Molecule | Verify | Uninstall the role (run_apache_httpd_state: absent)"
       ansible.builtin.include_role:
         name: "foundata.apache_httpd.run"
       vars:
         run_apache_httpd_state: "absent"
 
-
     - name: "Molecule | Verify | Stat managed vhost file and symlink after uninstall"
       ansible.builtin.stat:
         path: "{{ item }}"
-      register: __testing_uninstall_after
       loop:
         - "{{ __testing_uninstall_vhost_available }}"
         - "{{ __testing_uninstall_vhost_enabled }}"
 
-
+      register: __testing_uninstall_after
     - name: "Molecule | Verify | Assert managed vhost file and symlink were removed by uninstall"
       ansible.builtin.assert:
         that:
@@ -934,16 +876,14 @@
           enabled exists={{ __testing_uninstall_after['results'][1]['stat']['exists'] }}).
         success_msg: "Uninstall removed the managed vhost file and its enabled symlink."
 
-
     - name: "Molecule | Verify | Stat the planted historical vhost after uninstall"
       ansible.builtin.stat:
         path: "{{ item }}"
-      register: __testing_uninstall_leftover_after
       loop:
         - "{{ __run_apache_httpd_config_service_dropin_vhosts_available_dir_path }}/renamed-leftover.conf"
         - "{{ __run_apache_httpd_config_service_dropin_vhosts_enabled_dir_path }}/renamed-leftover.conf"
 
-
+      register: __testing_uninstall_leftover_after
     - name: "Molecule | Verify | Assert the marker sweep removed the renamed historical vhost"
       ansible.builtin.assert:
         that:
@@ -954,30 +894,27 @@
           survived the uninstall (renamed historical vhosts would linger).
         success_msg: "The renamed historical vhost was removed by the marker sweep."
 
-
     - name: "Molecule | Verify | Check the vhost directories are gone after uninstall (Red Hat platforms)"
       ansible.builtin.stat:
         path: "{{ item }}"
-      register: __testing_uninstall_dirs_stat
+      when:
+        - (ansible_facts['os_family'] | ansible.builtin.lower) not in ['debian', 'suse']
+
       failed_when:
         - __testing_uninstall_dirs_stat['stat']['exists']
       loop:
         - "{{ __run_apache_httpd_config_service_dropin_vhosts_available_dir_path }}"
         - "{{ __run_apache_httpd_config_service_dropin_vhosts_enabled_dir_path }}"
-      when:
-        - (ansible_facts['os_family'] | ansible.builtin.lower) not in ['debian', 'suse']
-
-
+      register: __testing_uninstall_dirs_stat
     - name: "Molecule | Verify | Check the administrator's vhost file survived the uninstall (Debian, SUSE)"
       ansible.builtin.stat:
         path: "{{ __run_apache_httpd_config_service_dropin_vhosts_available_dir_path }}/admin-own.conf"
-      register: __testing_uninstall_admin_stat
-      failed_when:
-        - not __testing_uninstall_admin_stat['stat']['exists']
       when:
         - (ansible_facts['os_family'] | ansible.builtin.lower) in ['debian', 'suse']
 
-
+      failed_when:
+        - not __testing_uninstall_admin_stat['stat']['exists']
+      register: __testing_uninstall_admin_stat
     - name: "Molecule | Verify | Remove the administrator-owned test file (Debian, SUSE)"
       ansible.builtin.file:
         path: "{{ __run_apache_httpd_config_service_dropin_vhosts_available_dir_path }}/admin-own.conf"
@@ -985,11 +922,9 @@
       when:
         - (ansible_facts['os_family'] | ansible.builtin.lower) in ['debian', 'suse']
 
-
     - name: "Molecule | Verify | Stat role-managed module symlinks after uninstall (Debian)"
       ansible.builtin.stat:
         path: "/etc/apache2/mods-enabled/{{ item }}"
-      register: __testing_uninstall_modlinks_after
       when:
         - (ansible_facts['os_family'] | ansible.builtin.lower) == 'debian'
       loop:
@@ -997,7 +932,7 @@
         - "headers.load"
         - "rewrite.load"
 
-
+      register: __testing_uninstall_modlinks_after
     - name: "Molecule | Verify | Assert role-managed module symlinks were removed (Debian)"
       ansible.builtin.assert:
         that:
@@ -1011,23 +946,20 @@
       when:
         - (ansible_facts['os_family'] | ansible.builtin.lower) == 'debian'
 
-
     - name: "Molecule | Verify | Read the sysconfig after uninstall (SUSE)"
       ansible.builtin.slurp:
         src: "/etc/sysconfig/apache2"
-      register: __testing_uninstall_sysconfig_after
       when:
         - (ansible_facts['os_family'] | ansible.builtin.lower) == 'suse'
 
-
+      register: __testing_uninstall_sysconfig_after
     - name: "Molecule | Verify | Stat the saved pre-role sysconfig after uninstall (SUSE)"
       ansible.builtin.stat:
         path: "/etc/sysconfig/apache2.ansible-orig"
-      register: __testing_uninstall_sysconfig_backup_after
       when:
         - (ansible_facts['os_family'] | ansible.builtin.lower) == 'suse'
 
-
+      register: __testing_uninstall_sysconfig_backup_after
     - name: "Molecule | Verify | Assert the pre-role APACHE_MODULES value was restored (SUSE)"
       ansible.builtin.assert:
         that:
@@ -1043,7 +975,6 @@
         success_msg: "The pre-role APACHE_MODULES value was restored and the saved copy removed."
       when:
         - (ansible_facts['os_family'] | ansible.builtin.lower) == 'suse'
-
 
 ## Init-only merged variable evaluation
 #
@@ -1061,7 +992,6 @@
 
 - name: "Molecule | Verify | Validate effective merged variables (init-only)"
   block:
-
     - name: "Molecule | Verify | Set controlled inputs for the merge checks"
       ansible.builtin.set_fact:
         run_apache_httpd_mpm: "event"
@@ -1074,13 +1004,11 @@
         __run_apache_httpd_main_directives_overwrite:
           ServerTokens: "Full"
 
-
     - name: "Molecule | Verify | Re-initialize apache_httpd with controlled inputs"
       ansible.builtin.include_role:
         name: "foundata.apache_httpd.run"
         tasks_from: "init"
         public: true
-
 
     - name: "Molecule | Verify | Assert effective main directives merged correctly"
       ansible.builtin.assert:
@@ -1092,7 +1020,6 @@
         fail_msg: "__run_apache_httpd_effective_main_directives did not merge defaults and overrides as expected."
         success_msg: "__run_apache_httpd_effective_main_directives merged defaults and overrides correctly."
 
-
     - name: "Molecule | Verify | Assert effective snippet settings merged correctly"
       ansible.builtin.assert:
         that:
@@ -1102,7 +1029,6 @@
           - __run_apache_httpd_effective_snippet_settings['php-fpm']['tcp_port'] == 9000
         fail_msg: "__run_apache_httpd_effective_snippet_settings did not merge defaults and user settings as expected."
         success_msg: "__run_apache_httpd_effective_snippet_settings merged defaults and user settings correctly."
-
 
     - name: "Molecule | Verify | Assert RedHat-family platform overwrite is present in snippet settings"
       ansible.builtin.assert:
@@ -1116,14 +1042,13 @@
       when:
         - (ansible_facts['os_family'] | ansible.builtin.lower) == "redhat"
 
-
     - name: "Molecule | Verify | Assert effective modules list merged correctly"
       ansible.builtin.assert:
         that:
           - "'mpm_event' in __run_apache_httpd_effective_modules_enabled"
           - "'rewrite' in __run_apache_httpd_effective_modules_enabled"
           - "'headers' in __run_apache_httpd_effective_modules_enabled"
-          - (__run_apache_httpd_effective_modules_enabled | ansible.builtin.unique | ansible.builtin.length)
-            == (__run_apache_httpd_effective_modules_enabled | ansible.builtin.length)
+          - (__run_apache_httpd_effective_modules_enabled | ansible.builtin.unique | ansible.builtin.length) == (__run_apache_httpd_effective_modules_enabled |
+            ansible.builtin.length)
         fail_msg: "__run_apache_httpd_effective_modules_enabled did not include the MPM/user modules or contained duplicates."
         success_msg: "__run_apache_httpd_effective_modules_enabled includes the MPM and user modules and is unique."
