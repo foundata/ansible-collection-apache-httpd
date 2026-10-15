@@ -13,6 +13,9 @@ argument_specs:
   # foundata.apache_httpd/roles/run/tasks/main.yml entry point
   main:
     short_description: "Main entry point for the foundata.apache_httpd.run role"
+    description: |
+      Manage the Apache HTTP server (a HTTP web server, reverse proxy, load
+      balancer)
     options:
 
       run_apache_httpd_state:

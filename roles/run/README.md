@@ -249,24 +249,27 @@ There are also tags that are generally not intended to be called directly but ar
 
 Main entry point for the foundata.apache_httpd.run role
 
+Manage the Apache HTTP server (a HTTP web server, reverse proxy, load
+balancer)
+
 The following variables can be configured for this role:
 
-| Variable | Type | Required | Default | Description (abstract) |
-|----------|------|----------|---------|------------------------|
-| `run_apache_httpd_state` | `str` | No | `"present"` | Determines whether the managed resources should be `present` or `absent`.<br><br>`present` ensures that required components, such as software packages, are installed and configured.<br><br>`absent` reverts changes as much as possible, such as […](#variable-run_apache_httpd_state) |
-| `run_apache_httpd_autoupgrade` | `bool` | No | `false` | If set to `true`, all managed packages will be upgraded during each Ansible run (e.g., when the package provider detects a newer version than the currently installed one). |
-| `run_apache_httpd_service_state` | `str` | No | `"enabled"` | Defines the status of the service(s).<br><br>`enabled`: Service is running and will start automatically at boot.<br><br>`disabled`: Service is stopped and will not start automatically at boot.<br><br>`running` Service is running but will not start […](#variable-run_apache_httpd_service_state) |
-| `run_apache_httpd_mpm` | `str` | No | `"event"` | Selects the Multi-Processing Module (MPM) that determines how Apache handles concurrent connections.<br><br>`event`: A hybrid multi-process/multi-threaded model with an event-driven connection handling loop. Best for modern workloads, especially with […](#variable-run_apache_httpd_mpm) |
-| `run_apache_httpd_vhosts_default_manage` | `bool` | No | `true` | Controls whether the role includes a hardened catch-all `` in the main configuration file.<br><br>When set to `true`, a default VirtualHost is rendered that listens on ports 80 and 443 with a minimal, restrictive configuration. This acts as a […](#variable-run_apache_httpd_vhosts_default_manage) |
-| `run_apache_httpd_main_config_block` | `str` | No | `""` | Additional Apache HTTPD configuration directives for the global (server-wide) context of the main configuration file.<br><br>The value is inserted verbatim into the rendered configuration file. Only directives valid in the Apache server config […](#variable-run_apache_httpd_main_config_block) |
-| `run_apache_httpd_main_config_baseline_manage` | `bool` | No | `true` | Controls whether the role injects curated baseline directives into the main configuration file.<br><br>When set to `true`, the role provides sane defaults for the global context (e.g., `ServerTokens ProductOnly`, `ServerSignature Off`, […](#variable-run_apache_httpd_main_config_baseline_manage) |
-| `run_apache_httpd_vhosts_config` | `list` | No | `[]` | List of VirtualHost definitions (sometimes called vHosts or sites) to manage. Each entry describes a VirtualHost as a dictionary holding its name, enablement state, and raw Apache configuration content.<br><br>For each entry, the role renders a […](#variable-run_apache_httpd_vhosts_config) |
-| `run_apache_httpd_vhosts_delete_unmanaged` | `bool` | No | `true` | Controls whether the role removes stale VirtualHost files that are not declared in `run_apache_httpd_vhosts_config`.<br><br>When set to `true`, any `*.conf` file or symlink found in the available and enabled directories whose name does not match an […](#variable-run_apache_httpd_vhosts_delete_unmanaged) |
-| `run_apache_httpd_modules_enabled` | `list` | No | `[]` | List of Apache module short names to enable.<br><br>Module names correspond to what `a2enmod` accepts or the `.so` filename with the `mod_` prefix and `_module`/`.so` suffix stripped (e.g. `ssl` from `mod_ssl.so`, `proxy_fcgi` from […](#variable-run_apache_httpd_modules_enabled) |
-| `run_apache_httpd_modules_disable_unmanaged` | `bool` | No | `true` | Controls whether the role disables modules that are not declared in `run_apache_httpd_modules_enabled`.<br><br>When set to `true`, modules not listed in `run_apache_httpd_modules_enabled` are disabled. On Debian, symlinks in `mods-enabled/` are […](#variable-run_apache_httpd_modules_disable_unmanaged) |
-| `run_apache_httpd_snippets_manage` | `bool` | No | `true` | Controls whether the role ships and manages its curated Apache config snippets (reusable, centrally maintained config blocks meant to be pulled into VirtualHost or Directory contexts via `Include snippets/.conf`).<br><br>When set to `true`, the role […](#variable-run_apache_httpd_snippets_manage) |
-| `run_apache_httpd_snippet_settings` | `dict` | No | `{}` | User-level overrides for the configuration snippets shipped by this role.<br><br>Each top-level key corresponds to a snippet name (e.g. `hsts`, `php-fpm`, `tls-baseline`). Values are dictionaries whose keys map to template variables used when […](#variable-run_apache_httpd_snippet_settings) |
-| `run_apache_httpd_snippets_delete_unmanaged` | `bool` | No | `false` | Controls whether the role removes snippet files below the snippet directories that are not managed by this role.<br><br>When set to `true`, any files in the snippet subdirectories (`global/`, `vhost/`, `directory/`) that were not rendered by the […](#variable-run_apache_httpd_snippets_delete_unmanaged) |
+|                    Variable                    |  Type  | Required |   Default   | Description (abstract) |
+| ---------------------------------------------- | ------ | -------- | ----------- | ---------------------- |
+| `run_apache_httpd_state`                       | `str`  | No       | `"present"` | Determines whether the managed resources should be `present` or `absent`.<br><br>`present` ensures that required components, such as software packages, are installed and configured.<br><br>`absent` reverts changes as much as possible, such as […](#variable-run_apache_httpd_state) |
+| `run_apache_httpd_autoupgrade`                 | `bool` | No       | `false`     | If set to `true`, all managed packages will be upgraded during each Ansible run (e.g., when the package provider detects a newer version than the currently installed one). |
+| `run_apache_httpd_service_state`               | `str`  | No       | `"enabled"` | Defines the status of the service(s).<br><br>`enabled`: Service is running and will start automatically at boot.<br><br>`disabled`: Service is stopped and will not start automatically at boot.<br><br>`running` Service is running but will not start […](#variable-run_apache_httpd_service_state) |
+| `run_apache_httpd_mpm`                         | `str`  | No       | `"event"`   | Selects the Multi-Processing Module (MPM) that determines how Apache handles concurrent connections.<br><br>`event`: A hybrid multi-process/multi-threaded model with an event-driven connection handling loop. Best for modern workloads, especially with […](#variable-run_apache_httpd_mpm) |
+| `run_apache_httpd_vhosts_default_manage`       | `bool` | No       | `true`      | Controls whether the role includes a hardened catch-all `` in the main configuration file.<br><br>When set to `true`, a default VirtualHost is rendered that listens on ports 80 and 443 with a minimal, restrictive configuration. This acts as a […](#variable-run_apache_httpd_vhosts_default_manage) |
+| `run_apache_httpd_main_config_block`           | `str`  | No       | `""`        | Additional Apache HTTPD configuration directives for the global (server-wide) context of the main configuration file.<br><br>The value is inserted verbatim into the rendered configuration file. Only directives valid in the Apache server config […](#variable-run_apache_httpd_main_config_block) |
+| `run_apache_httpd_main_config_baseline_manage` | `bool` | No       | `true`      | Controls whether the role injects curated baseline directives into the main configuration file.<br><br>When set to `true`, the role provides sane defaults for the global context (e.g., `ServerTokens ProductOnly`, `ServerSignature Off`, […](#variable-run_apache_httpd_main_config_baseline_manage) |
+| `run_apache_httpd_vhosts_config`               | `list` | No       | `[]`        | List of VirtualHost definitions (sometimes called vHosts or sites) to manage. Each entry describes a VirtualHost as a dictionary holding its name, enablement state, and raw Apache configuration content.<br><br>For each entry, the role renders a […](#variable-run_apache_httpd_vhosts_config) |
+| `run_apache_httpd_vhosts_delete_unmanaged`     | `bool` | No       | `true`      | Controls whether the role removes stale VirtualHost files that are not declared in `run_apache_httpd_vhosts_config`.<br><br>When set to `true`, any `*.conf` file or symlink found in the available and enabled directories whose name does not match an […](#variable-run_apache_httpd_vhosts_delete_unmanaged) |
+| `run_apache_httpd_modules_enabled`             | `list` | No       | `[]`        | List of Apache module short names to enable.<br><br>Module names correspond to what `a2enmod` accepts or the `.so` filename with the `mod_` prefix and `_module`/`.so` suffix stripped (e.g. `ssl` from `mod_ssl.so`, `proxy_fcgi` from […](#variable-run_apache_httpd_modules_enabled) |
+| `run_apache_httpd_modules_disable_unmanaged`   | `bool` | No       | `true`      | Controls whether the role disables modules that are not declared in `run_apache_httpd_modules_enabled`.<br><br>When set to `true`, modules not listed in `run_apache_httpd_modules_enabled` are disabled. On Debian, symlinks in `mods-enabled/` are […](#variable-run_apache_httpd_modules_disable_unmanaged) |
+| `run_apache_httpd_snippets_manage`             | `bool` | No       | `true`      | Controls whether the role ships and manages its curated Apache config snippets (reusable, centrally maintained config blocks meant to be pulled into VirtualHost or Directory contexts via `Include snippets/.conf`).<br><br>When set to `true`, the role […](#variable-run_apache_httpd_snippets_manage) |
+| `run_apache_httpd_snippet_settings`            | `dict` | No       | `{}`        | User-level overrides for the configuration snippets shipped by this role.<br><br>Each top-level key corresponds to a snippet name (e.g. `hsts`, `php-fpm`, `tls-baseline`). Values are dictionaries whose keys map to template variables used when […](#variable-run_apache_httpd_snippet_settings) |
+| `run_apache_httpd_snippets_delete_unmanaged`   | `bool` | No       | `false`     | Controls whether the role removes snippet files below the snippet directories that are not managed by this role.<br><br>When set to `true`, any files in the snippet subdirectories (`global/`, `vhost/`, `directory/`) that were not rendered by the […](#variable-run_apache_httpd_snippets_delete_unmanaged) |
 
 ### `run_apache_httpd_state`<a id="variable-run_apache_httpd_state"></a>
 
@@ -470,6 +473,7 @@ the role creates them and adds the necessary `IncludeOptional` directive
 to the managed main configuration file.
 
 Example:
+
 ```yaml
 run_apache_httpd_vhosts_config:
   - name: "example.com"
@@ -589,6 +593,7 @@ with the `mod_` prefix and `_module`/`.so` suffix stripped (e.g. `ssl`
 from `mod_ssl.so`, `proxy_fcgi` from `mod_proxy_fcgi.so`).
 
 Example:
+
 ```yaml
 run_apache_httpd_modules_enabled:
   - "ssl"
@@ -685,6 +690,7 @@ defaults (see `__run_apache_httpd_snippet_settings_defaults` in
 specify are overridden; all other settings keep their default values.
 
 Example:
+
 ```yaml
 run_apache_httpd_snippet_settings:
   hsts:
@@ -709,20 +715,24 @@ the `Strict-Transport-Security` HTTP response header.
 - **Type**: `dict`
 - **Required**: No
 
-##### `run_apache_httpd_snippet_settings['hsts']['max_age']`<a id="variable-run_apache_httpd_snippet_settings-sub-hsts-sub-max_age"></a>
+<a id="variable-run_apache_httpd_snippet_settings-sub-hsts-sub-max_age"></a>
+
+##### `run_apache_httpd_snippet_settings['hsts']['max_age']`
 
 [*⇑ Back to ToC ⇑*](#toc)
 
 Duration in seconds that the browser should remember to only
 access the site via HTTPS. The default of 31536000 corresponds
 to one year, which is the minimum recommended by
-https://hstspreload.org/.
+<https://hstspreload.org/>.
 
 - **Type**: `int`
 - **Required**: No
 - **Default**: `31536000`
 
-##### `run_apache_httpd_snippet_settings['hsts']['include_subdomains']`<a id="variable-run_apache_httpd_snippet_settings-sub-hsts-sub-include_subdomains"></a>
+<a id="variable-run_apache_httpd_snippet_settings-sub-hsts-sub-include_subdomains"></a>
+
+##### `run_apache_httpd_snippet_settings['hsts']['include_subdomains']`
 
 [*⇑ Back to ToC ⇑*](#toc)
 
@@ -733,7 +743,9 @@ current domain. Required for HSTS preload list submission.
 - **Required**: No
 - **Default**: `true`
 
-##### `run_apache_httpd_snippet_settings['hsts']['preload']`<a id="variable-run_apache_httpd_snippet_settings-sub-hsts-sub-preload"></a>
+<a id="variable-run_apache_httpd_snippet_settings-sub-hsts-sub-preload"></a>
+
+##### `run_apache_httpd_snippet_settings['hsts']['preload']`
 
 [*⇑ Back to ToC ⇑*](#toc)
 
@@ -759,7 +771,9 @@ for `proxy:fcgi://` or `proxy:unix:`.
 - **Type**: `dict`
 - **Required**: No
 
-##### `run_apache_httpd_snippet_settings['php-fpm']['type']`<a id="variable-run_apache_httpd_snippet_settings-sub-php-fpm-sub-type"></a>
+<a id="variable-run_apache_httpd_snippet_settings-sub-php-fpm-sub-type"></a>
+
+##### `run_apache_httpd_snippet_settings['php-fpm']['type']`
 
 [*⇑ Back to ToC ⇑*](#toc)
 
@@ -772,7 +786,9 @@ via a Unix domain socket (lower overhead, same-host only).
 - **Default**: `"socket"`
 - **Choices**: `socket`, `tcp`
 
-##### `run_apache_httpd_snippet_settings['php-fpm']['socket']`<a id="variable-run_apache_httpd_snippet_settings-sub-php-fpm-sub-socket"></a>
+<a id="variable-run_apache_httpd_snippet_settings-sub-php-fpm-sub-socket"></a>
+
+##### `run_apache_httpd_snippet_settings['php-fpm']['socket']`
 
 [*⇑ Back to ToC ⇑*](#toc)
 
@@ -783,7 +799,9 @@ Absolute path to the PHP-FPM Unix socket. Only used when
 - **Required**: No
 - **Default**: `"/run/php/php-fpm.sock"`
 
-##### `run_apache_httpd_snippet_settings['php-fpm']['tcp_host']`<a id="variable-run_apache_httpd_snippet_settings-sub-php-fpm-sub-tcp_host"></a>
+<a id="variable-run_apache_httpd_snippet_settings-sub-php-fpm-sub-tcp_host"></a>
+
+##### `run_apache_httpd_snippet_settings['php-fpm']['tcp_host']`
 
 [*⇑ Back to ToC ⇑*](#toc)
 
@@ -794,7 +812,9 @@ when `type` is set to `tcp`.
 - **Required**: No
 - **Default**: `"127.0.0.1"`
 
-##### `run_apache_httpd_snippet_settings['php-fpm']['tcp_port']`<a id="variable-run_apache_httpd_snippet_settings-sub-php-fpm-sub-tcp_port"></a>
+<a id="variable-run_apache_httpd_snippet_settings-sub-php-fpm-sub-tcp_port"></a>
+
+##### `run_apache_httpd_snippet_settings['php-fpm']['tcp_port']`
 
 [*⇑ Back to ToC ⇑*](#toc)
 
@@ -816,7 +836,9 @@ TLS hardening following the Mozilla "Intermediate" profile.
 - **Type**: `dict`
 - **Required**: No
 
-##### `run_apache_httpd_snippet_settings['tls-baseline']['dhparam_path']`<a id="variable-run_apache_httpd_snippet_settings-sub-tls-baseline-sub-dhparam_path"></a>
+<a id="variable-run_apache_httpd_snippet_settings-sub-tls-baseline-sub-dhparam_path"></a>
+
+##### `run_apache_httpd_snippet_settings['tls-baseline']['dhparam_path']`
 
 [*⇑ Back to ToC ⇑*](#toc)
 
@@ -830,7 +852,9 @@ this to match each distribution's conventional TLS directory
 - **Required**: No
 - **Default**: `"/etc/ssl/certs/dhparam_ffdhe3072.pem"`
 
-##### `run_apache_httpd_snippet_settings['tls-baseline']['ecdh_curves']`<a id="variable-run_apache_httpd_snippet_settings-sub-tls-baseline-sub-ecdh_curves"></a>
+<a id="variable-run_apache_httpd_snippet_settings-sub-tls-baseline-sub-ecdh_curves"></a>
+
+##### `run_apache_httpd_snippet_settings['tls-baseline']['ecdh_curves']`
 
 [*⇑ Back to ToC ⇑*](#toc)
 
@@ -844,7 +868,9 @@ back to a classical-only list via version-specific vars files.
 - **Required**: No
 - **Default**: `"X25519MLKEM768:X25519:prime256v1:secp384r1"`
 
-##### `run_apache_httpd_snippet_settings['tls-baseline']['resolvers']`<a id="variable-run_apache_httpd_snippet_settings-sub-tls-baseline-sub-resolvers"></a>
+<a id="variable-run_apache_httpd_snippet_settings-sub-tls-baseline-sub-resolvers"></a>
+
+##### `run_apache_httpd_snippet_settings['tls-baseline']['resolvers']`
 
 [*⇑ Back to ToC ⇑*](#toc)
 
@@ -856,7 +882,9 @@ at `127.0.0.1`) is recommended for privacy and latency.
 - **Required**: No
 - **List Elements**: `str`
 
-##### `run_apache_httpd_snippet_settings['tls-baseline']['resolver_timeout']`<a id="variable-run_apache_httpd_snippet_settings-sub-tls-baseline-sub-resolver_timeout"></a>
+<a id="variable-run_apache_httpd_snippet_settings-sub-tls-baseline-sub-resolver_timeout"></a>
+
+##### `run_apache_httpd_snippet_settings['tls-baseline']['resolver_timeout']`
 
 [*⇑ Back to ToC ⇑*](#toc)
 
@@ -865,7 +893,6 @@ Timeout for DNS resolver queries used by OCSP stapling.
 - **Type**: `str`
 - **Required**: No
 - **Default**: `"3s"`
-
 
 
 
@@ -889,7 +916,6 @@ Only takes effect when `run_apache_httpd_snippets_manage` is `true`.
 - **Type**: `bool`
 - **Required**: No
 - **Default**: `false`
-
 
 
 
