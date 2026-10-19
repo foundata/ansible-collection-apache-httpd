@@ -282,7 +282,7 @@ are included for completeness and to cover edge cases:
 
 ## Role variables<a id="variables"></a>
 
-Main entry point for the foundata.apache_httpd.run role
+Main entry point for the foundata.apache_httpd.run role.
 
 Manage the Apache HTTP server (a HTTP web server, reverse proxy, load
 balancer)
@@ -292,8 +292,8 @@ The following variables can be configured for this role:
 |                    Variable                    |  Type  | Required |   Default   | Description (abstract) |
 | ---------------------------------------------- | ------ | -------- | ----------- | ---------------------- |
 | `run_apache_httpd_state`                       | `str`  | No       | `"present"` | Determines whether the managed resources should be `present` or `absent`.<br><br>`present` ensures that required components, such as software packages, are installed and configured.<br><br>`absent` reverts changes as much as possible, such as […](#variable-run_apache_httpd_state) |
-| `run_apache_httpd_autoupgrade`                 | `bool` | No       | `false`     | If set to `true`, all managed packages will be upgraded during each Ansible run (e.g., when the package provider detects a newer version than the currently installed one). |
-| `run_apache_httpd_service_state`               | `str`  | No       | `"enabled"` | Defines the status of the service(s).<br><br>`enabled`: Service is running and will start automatically at boot.<br><br>`disabled`: Service is stopped and will not start automatically at boot.<br><br>`running` Service is running but will not start […](#variable-run_apache_httpd_service_state) |
+| `run_apache_httpd_autoupgrade`                 | `bool` | No       | `false`     | If set to `true`, each Ansible run upgrades the managed packages to the newest version the package provider offers. |
+| `run_apache_httpd_service_state`               | `str`  | No       | `"enabled"` | Defines the status of the service(s). Possible values:<br><br>- `enabled`: Service is running and will start automatically at boot. - `disabled`: Service is stopped and will not start automatically at boot. - `running`: Service is running but will […](#variable-run_apache_httpd_service_state) |
 | `run_apache_httpd_mpm`                         | `str`  | No       | `"event"`   | Selects the Multi-Processing Module (MPM) that determines how Apache handles concurrent connections.<br><br>`event`: A hybrid multi-process/multi-threaded model with an event-driven connection handling loop. Best for modern workloads, especially with […](#variable-run_apache_httpd_mpm) |
 | `run_apache_httpd_vhosts_default_manage`       | `bool` | No       | `true`      | Controls whether the role includes a hardened catch-all `` in the main configuration file.<br><br>When set to `true`, a default VirtualHost is rendered that listens on ports 80 and 443 with a minimal, restrictive configuration. This acts as a […](#variable-run_apache_httpd_vhosts_default_manage) |
 | `run_apache_httpd_main_config_block`           | `str`  | No       | `""`        | Additional Apache HTTPD configuration directives for the global (server-wide) context of the main configuration file.<br><br>The value is inserted verbatim into the rendered configuration file. Only directives valid in the Apache server config […](#variable-run_apache_httpd_main_config_block) |
@@ -316,7 +316,7 @@ Determines whether the managed resources should be `present` or `absent`.
 installed and configured.
 
 `absent` reverts changes as much as possible, such as removing packages,
-deleting created users, stopping services, restoring modified settings, …
+deleting created users, stopping services and restoring modified settings.
 
 Note for Debian/Ubuntu: reinstalling the distribution's Apache after
 `absent` requires purging first (`apt purge apache2 && apt install
@@ -337,9 +337,8 @@ yields a working default installation.
 
 [*⇑ Back to ToC ⇑*](#toc)
 
-If set to `true`, all managed packages will be upgraded during each Ansible
-run (e.g., when the package provider detects a newer version than the
-currently installed one).
+If set to `true`, each Ansible run upgrades the managed packages to the
+newest version the package provider offers.
 
 - **Type**: `bool`
 - **Required**: No
@@ -351,23 +350,19 @@ currently installed one).
 
 [*⇑ Back to ToC ⇑*](#toc)
 
-Defines the status of the service(s).
+Defines the status of the service(s). Possible values:
 
-`enabled`: Service is running and will start automatically at boot.
+- `enabled`: Service is running and will start automatically at boot.
+- `disabled`: Service is stopped and will not start automatically at boot.
+- `running`: Service is running but will not start automatically at boot.
+  This can be used to start a service on the first Ansible run without
+  enabling it for boot.
+- `unmanaged`: Ansible does not manage the service at all: both the
+  running state and the boot (enablement) state are left exactly as they
+  are. This is primarily useful when services are monitored and managed
+  by systems other than Ansible.
 
-`disabled`: Service is stopped and will not start automatically at boot.
-
-`running` Service is running but will not start automatically at boot.
-This can be used to start a service on the first Ansible run without
-enabling it for boot.
-
-`unmanaged`: Ansible does not manage the service at all: both the
-running state and the boot (enablement) state are left exactly as they
-are. This is primarily useful when services are monitored and managed
-by systems other than Ansible.
-
-The singular form (`service`) is used for simplicity. However, the defined
-status applies to all services if multiple are being managed by this role.
+The defined status applies to all services if the role manages several.
 
 - **Type**: `str`
 - **Required**: No
