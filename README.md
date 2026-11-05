@@ -45,9 +45,8 @@ proxy, load balancer.
 ### Role: `foundata.apache_httpd.run`
 
 The primary role in this collection to configure and maintain Apache HTTPD,
-including virtual hosts (vHosts) and related configuration.
-[Its `README.md`](./roles/run/README.md) covers configuration, usage examples,
-and more:
+including virtual hosts (vHosts) and related configuration. [Its
+`README.md`](./roles/run/README.md) covers configuration and usage examples.
 
 <!-- ANSIBLE DOCSMITH TOC-FULL run START -->
 - [Ansible role: `foundata.apache_httpd.run`](./roles/run/README.md#ansible-role-foundataapache_httpdrun)
