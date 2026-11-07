@@ -4,6 +4,25 @@ foundata.apache\_httpd Ansible collection Release Notes
 
 .. contents:: Topics
 
+v1.4.0
+======
+
+Minor Changes
+-------------
+
+- Add role-prefixed handler topics and use them for internal notifications. Retain the previous topics as migration aliases until version 2.0.0.
+- Add the handler topic run_apache_httpd_reload_apache_httpd as the replacement for "run_apache_httpd: reload apache_httpd.service".
+- Add the handler topic run_apache_httpd_reload_systemd_daemon as the replacement for "run_apache_httpd: systemd daemon-reload".
+- Add the handler topic run_apache_httpd_restart_apache_httpd as the replacement for "run_apache_httpd: restart apache_httpd.service".
+- Add the handler topic run_apache_httpd_validate_configuration as the replacement for "run_apache_httpd: validate configuration".
+
+Bugfixes
+--------
+
+- Check the minimum ansible-core version before gathering role facts so unsupported versions fail with the intended diagnostic.
+- Limit automatic fact gathering to each role's declared subsets while retaining missing-fact recovery and reuse of cached facts.
+- The declared ansible-core minimum is corrected from 2.16 to 2.19. The roles write Jinja's own filters and tests as ``ansible.builtin.<name>``, which ansible-core resolves from 2.19 only; on 2.16 to 2.18 every run failed at the first such expression, so no working installation is affected.
+
 v1.3.0
 ======
 
