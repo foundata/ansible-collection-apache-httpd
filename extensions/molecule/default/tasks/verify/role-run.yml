@@ -510,11 +510,17 @@
       - __testing_tls_snippet is ansible.builtin.search('SSLCipherSuite ECDHE-ECDSA-AES128-GCM-SHA256:')
       - __testing_tls_snippet is ansible.builtin.search('SSLOpenSSLConfCmd Curves')
       - __testing_tls_snippet is ansible.builtin.search('SSLSessionCache')
+      - "'SSLUseStapling on' in __testing_tls_snippet.splitlines()"
     fail_msg: >-
       One or more TLS baseline directives are missing from the TLS baseline snippet.
     success_msg: >-
       All TLS baseline directives (SSLProtocol, SSLHonorCipherOrder, DHParameters,
       SSLCipherSuite, Curves, SSLSessionCache) are present in the snippet.
+
+
+- name: "Molecule | Verify | Disable OCSP stapling for a certificate without a responder"
+  ansible.builtin.include_tasks:
+    file: "role-run/tls-stapling.yml"
 
 
 ## Security response headers

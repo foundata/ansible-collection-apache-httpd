@@ -452,6 +452,12 @@ argument_specs:
                   back to a classical-only list via version-specific vars files.
                 type: "str"
                 default: "X25519MLKEM768:X25519:prime256v1:secp384r1"
+              ocsp_stapling:
+                description: |
+                  Enable OCSP stapling in the TLS baseline. Set to `false` if
+                  your certificates have no OCSP responder URL.
+                type: "bool"
+                default: true
               resolvers:
                 description: |
                   List of DNS resolver IP addresses used for OCSP stapling

@@ -83,6 +83,7 @@ including virtual hosts (vHosts) and related configuration. [Its
       - [`run_apache_httpd_snippet_settings['tls-baseline']`](./roles/run/README.md#variable-run_apache_httpd_snippet_settings-sub-tls-baseline)
         - [`run_apache_httpd_snippet_settings['tls-baseline']['dhparam_path']`](./roles/run/README.md#variable-run_apache_httpd_snippet_settings-sub-tls-baseline-sub-dhparam_path)
         - [`run_apache_httpd_snippet_settings['tls-baseline']['ecdh_curves']`](./roles/run/README.md#variable-run_apache_httpd_snippet_settings-sub-tls-baseline-sub-ecdh_curves)
+        - [`run_apache_httpd_snippet_settings['tls-baseline']['ocsp_stapling']`](./roles/run/README.md#variable-run_apache_httpd_snippet_settings-sub-tls-baseline-sub-ocsp_stapling)
         - [`run_apache_httpd_snippet_settings['tls-baseline']['resolvers']`](./roles/run/README.md#variable-run_apache_httpd_snippet_settings-sub-tls-baseline-sub-resolvers)
         - [`run_apache_httpd_snippet_settings['tls-baseline']['resolver_timeout']`](./roles/run/README.md#variable-run_apache_httpd_snippet_settings-sub-tls-baseline-sub-resolver_timeout)
     - [`run_apache_httpd_snippets_delete_unmanaged`](./roles/run/README.md#variable-run_apache_httpd_snippets_delete_unmanaged)

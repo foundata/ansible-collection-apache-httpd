@@ -105,7 +105,7 @@ SSLSessionCacheTimeout {{ settings['ssl_session_timeout'] }}
 # - https://ssl-config.mozilla.org/
 # - https://wiki.mozilla.org/Security/Server_Side_TLS#OCSP_Stapling
 # - https://raymii.org/s/tutorials/OCSP_Stapling_on_nginx.html
-{% if settings['ocsp_stapling'] %}
+{% if settings['ocsp_stapling'] | ansible.builtin.bool %}
 SSLUseStapling on
 SSLStaplingResponderTimeout 5
 SSLStaplingReturnResponderErrors off

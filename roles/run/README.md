@@ -47,6 +47,7 @@ distributions.
     - [`run_apache_httpd_snippet_settings['tls-baseline']`](#variable-run_apache_httpd_snippet_settings-sub-tls-baseline)
       - [`run_apache_httpd_snippet_settings['tls-baseline']['dhparam_path']`](#variable-run_apache_httpd_snippet_settings-sub-tls-baseline-sub-dhparam_path)
       - [`run_apache_httpd_snippet_settings['tls-baseline']['ecdh_curves']`](#variable-run_apache_httpd_snippet_settings-sub-tls-baseline-sub-ecdh_curves)
+      - [`run_apache_httpd_snippet_settings['tls-baseline']['ocsp_stapling']`](#variable-run_apache_httpd_snippet_settings-sub-tls-baseline-sub-ocsp_stapling)
       - [`run_apache_httpd_snippet_settings['tls-baseline']['resolvers']`](#variable-run_apache_httpd_snippet_settings-sub-tls-baseline-sub-resolvers)
       - [`run_apache_httpd_snippet_settings['tls-baseline']['resolver_timeout']`](#variable-run_apache_httpd_snippet_settings-sub-tls-baseline-sub-resolver_timeout)
   - [`run_apache_httpd_snippets_delete_unmanaged`](#variable-run_apache_httpd_snippets_delete_unmanaged)
@@ -905,6 +906,19 @@ back to a classical-only list via version-specific vars files.
 - **Type**: `str`
 - **Required**: No
 - **Default**: `"X25519MLKEM768:X25519:prime256v1:secp384r1"`
+
+<a id="variable-run_apache_httpd_snippet_settings-sub-tls-baseline-sub-ocsp_stapling"></a>
+
+##### `run_apache_httpd_snippet_settings['tls-baseline']['ocsp_stapling']`
+
+[*⇑ Back to ToC ⇑*](#toc)
+
+Enable OCSP stapling in the TLS baseline. Set to `false` if
+your certificates have no OCSP responder URL.
+
+- **Type**: `bool`
+- **Required**: No
+- **Default**: `true`
 
 <a id="variable-run_apache_httpd_snippet_settings-sub-tls-baseline-sub-resolvers"></a>
 

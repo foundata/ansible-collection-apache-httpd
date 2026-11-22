@@ -1,0 +1,119 @@
+# SPDX-FileCopyrightText: foundata GmbH <https://foundata.com>
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+---
+- name: "Molecule | Verify | Read the test certificate's OCSP responder URL"
+  ansible.builtin.command:
+    argv:
+      - "openssl"
+      - "x509"
+      - "-in"
+      - "{{ __testing_examplecom_cert }}"
+      - "-noout"
+      - "-ocsp_uri"
+  changed_when:
+    - false
+  register: __testing_ocsp_uri
+
+- name: "Molecule | Verify | Confirm the certificate has no OCSP responder URL"
+  ansible.builtin.assert:
+    that:
+      - __testing_ocsp_uri['stdout'] | ansible.builtin.trim == ''
+
+- name: "Molecule | Verify | Load the global TLS baseline with OCSP stapling disabled"
+  vars:
+    __testing_tls_dropin: "{{ __run_apache_httpd_config_service_dropin_dir_path }}/molecule-tls-baseline.conf"
+  block:
+    - name: "Molecule | Verify | Record the end of the error log before reloading"
+      ansible.builtin.stat:
+        path: "{{ __run_apache_httpd_log_error_path }}"
+      register: __testing_error_log_before
+
+    - name: "Molecule | Verify | Include the TLS baseline and mark responses from the new workers"
+      ansible.builtin.copy:
+        dest: "{{ __testing_tls_dropin }}"
+        content: |
+          Include snippets/global/tls-baseline.conf
+          Header always set X-Molecule-TLS-Baseline "active"
+        mode: "u=rw,g=r,o=r" # 0644
+      notify:
+        - "run_apache_httpd_reload_apache_httpd"
+
+    - name: "Molecule | Verify | Configure stapling through the role's public interface"
+      ansible.builtin.include_role:
+        name: "foundata.apache_httpd.run"
+      vars:
+        run_apache_httpd_snippet_settings:
+          tls-baseline:
+            # Exercise string booleans passed through extra vars.
+            ocsp_stapling: "false"
+            # Supported by OpenSSL on every platform in this scenario.
+            ecdh_curves: "X25519:prime256v1:secp384r1"
+
+    - name: "Molecule | Verify | Activate the disabled stapling configuration"
+      ansible.builtin.meta: "flush_handlers"
+
+    - name: "Molecule | Verify | Wait for an HTTPS response from the reloaded workers"
+      ansible.builtin.command:
+        argv:
+          - "curl"
+          - "--head"
+          - "--fail"
+          - "--silent"
+          - "--show-error"
+          - "--insecure"
+          - "--noproxy"
+          - "*"
+          - "--resolve"
+          - "example.com:443:127.0.0.1"
+          - "https://example.com/"
+      changed_when:
+        - false
+      register: __testing_tls_response
+      until:
+        - __testing_tls_response is ansible.builtin.succeeded
+        - "'x-molecule-tls-baseline: active' in (__testing_tls_response['stdout'] | ansible.builtin.lower)"
+      retries: 10
+      delay: 1
+
+    - name: "Molecule | Verify | Read the reloaded TLS baseline"
+      ansible.builtin.slurp:
+        src: "{{ __run_apache_httpd_config_service_dropin_snippets_dir_path }}/global/tls-baseline.conf"
+      register: __testing_disabled_tls_snippet
+
+    - name: "Molecule | Verify | Read diagnostics written during activation"
+      ansible.builtin.command:
+        argv:
+          - "tail"
+          - "-c"
+          - "+{{ __testing_error_log_before['stat']['size'] + 1 }}"
+          - "{{ __run_apache_httpd_log_error_path }}"
+      changed_when:
+        - false
+      register: __testing_tls_diagnostics
+
+    - name: "Molecule | Verify | Assert stapling is off and no stapling errors were logged"
+      ansible.builtin.assert:
+        that:
+          - "'SSLUseStapling off' in __testing_tls_directives.splitlines()"
+          - "'SSLStaplingCache' not in __testing_tls_directives"
+          - __testing_tls_diagnostics['stdout'] is not ansible.builtin.search('(?i)stapling|ocsp')
+        fail_msg: "Unexpected TLS configuration or diagnostics: {{ __testing_tls_diagnostics['stdout'] }}"
+      vars:
+        __testing_tls_directives: "{{ __testing_disabled_tls_snippet['content'] | ansible.builtin.b64decode }}"
+
+  always:
+    - name: "Molecule | Verify | Remove the test TLS include"
+      ansible.builtin.file:
+        path: "{{ __testing_tls_dropin }}"
+        state: "absent"
+      notify:
+        - "run_apache_httpd_reload_apache_httpd"
+
+    - name: "Molecule | Verify | Restore the scenario snippet settings"
+      ansible.builtin.include_role:
+        name: "foundata.apache_httpd.run"
+        tasks_from: "config/default"
+
+    - name: "Molecule | Verify | Apply the restored configuration"
+      ansible.builtin.meta: "flush_handlers"
