@@ -65,6 +65,8 @@
     }}
   loop_control:
     loop_var: "__run_apache_httpd_module_item"
+  notify:
+    - "run_apache_httpd_restart_apache_httpd"
 
 - name: "Setup | Install | Default | Remove unwanted files and directories (e.g., to prevent conflicts or resolve incompatibilities)"
   ansible.builtin.file:

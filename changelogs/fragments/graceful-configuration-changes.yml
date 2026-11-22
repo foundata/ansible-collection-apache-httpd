@@ -1,0 +1,11 @@
+---
+minor_changes:
+  - >-
+    run - gracefully reload Apache for snippet and DH parameter changes and
+    apply a single validated service action per handler flush. A restart takes
+    precedence when both actions are requested.
+bugfixes:
+  - >-
+    run - avoid restarting Apache when correcting configuration directory
+    permissions and restart it after installing or upgrading an enabled module
+    package, including packages that enable the module themselves.

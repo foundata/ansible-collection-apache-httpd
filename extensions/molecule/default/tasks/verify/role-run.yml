@@ -587,6 +587,10 @@
       The Cache-Control header for static assets contains 'public' and 'immutable'.
 
 
+- name: "Molecule | Verify | Check validation and service activation"
+  ansible.builtin.include_tasks:
+    file: "role-run/configuration-actions.yml"
+
 ## Regression: stale module cleanup runs when the enabled list is emptied
 #
 # Debian-only (because that is where the role manages modules as symlinks); Platforms

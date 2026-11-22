@@ -47,9 +47,6 @@
   loop_control:
     loop_var: "__run_apache_httpd_path_item"
     label: "{{ __run_apache_httpd_path_item['path'] }}"
-  notify:
-    - "run_apache_httpd_validate_configuration"
-    - "run_apache_httpd_restart_apache_httpd"
 
 ## Backup original main config file if needed
 
@@ -203,7 +200,6 @@
     tpl_snakeoil_key_path: "{{ __run_apache_httpd_snakeoil_key_path }}"
     tpl_managed: "{{ ansible_managed }}"
   notify:
-    - "run_apache_httpd_validate_configuration"
     - "run_apache_httpd_restart_apache_httpd"
 
 ## Ports configuration file
@@ -223,7 +219,6 @@
   when:
     - run_apache_httpd_main_config_baseline_manage | ansible.builtin.bool
   notify:
-    - "run_apache_httpd_validate_configuration"
     - "run_apache_httpd_reload_apache_httpd"
 
 ## Config snippets
@@ -264,9 +259,6 @@
       loop_control:
         loop_var: "__run_apache_httpd_snippet_dir_item"
         label: "{{ __run_apache_httpd_snippet_dir_item['path'] }}"
-      notify:
-        - "run_apache_httpd_validate_configuration"
-        - "run_apache_httpd_restart_apache_httpd"
 
     - name: "Config | Default | Deploy Diffie-Hellman (DH) parameters file for TLS baseline snippet"
       ansible.builtin.copy:
@@ -276,8 +268,7 @@
         group: "{{ __run_apache_httpd_dhparam_ffdhe3072_group }}"
         mode: "{{ __run_apache_httpd_dhparam_ffdhe3072_mode }}"
       notify:
-        - "run_apache_httpd_validate_configuration"
-        - "run_apache_httpd_restart_apache_httpd"
+        - "run_apache_httpd_reload_apache_httpd"
 
     - name: "Config | Default | Create or update config snippet files (to provide common, centrally maintained config blocks to include)"
       ansible.builtin.template:
@@ -308,8 +299,7 @@
         - "templates/snippets/vhost/*.conf.j2"
         - "templates/snippets/directory/*.conf.j2"
       notify:
-        - "run_apache_httpd_validate_configuration"
-        - "run_apache_httpd_restart_apache_httpd"
+        - "run_apache_httpd_reload_apache_httpd"
 
 - name: "Config | Default | Delete stale / unmanaged config snippets"
   when:
@@ -360,7 +350,6 @@
         loop_var: "__run_apache_httpd_stale_snippet_item"
         label: "{{ __run_apache_httpd_stale_snippet_item['path'] }}"
       notify:
-        - "run_apache_httpd_validate_configuration"
         - "run_apache_httpd_reload_apache_httpd"
 
 ## VirtualHosts
@@ -429,7 +418,6 @@
     loop_var: "__run_apache_httpd_vhost_item"
     label: "{{ __run_apache_httpd_config_service_dropin_vhosts_available_dir_path }}/{{ __run_apache_httpd_loop_file_name }}"
   notify:
-    - "run_apache_httpd_validate_configuration"
     - "run_apache_httpd_reload_apache_httpd"
 
 - name: "Config | Default | Enable/disable vhost symlinks"
@@ -459,7 +447,6 @@
       {{ __run_apache_httpd_config_service_dropin_vhosts_enabled_dir_path }}/{{ __run_apache_httpd_loop_file_name }}
       -> {{ __run_apache_httpd_config_service_dropin_vhosts_available_dir_path }}/{{ __run_apache_httpd_loop_file_name }}
   notify:
-    - "run_apache_httpd_validate_configuration"
     - "run_apache_httpd_reload_apache_httpd"
 
 - name: "Config | Default | Delete stale / unmanaged vhost configs"
@@ -513,7 +500,6 @@
         loop_var: "__run_apache_httpd_stale_vhost_item"
         label: "{{ __run_apache_httpd_stale_vhost_item['path'] }}"
       notify:
-        - "run_apache_httpd_validate_configuration"
         - "run_apache_httpd_reload_apache_httpd"
 
 ### Modules
@@ -555,7 +541,6 @@
         loop_var: "__run_apache_httpd_module_conf_item"
         label: "{{ __run_apache_httpd_module_conf_item['name'] }} ({{ __run_apache_httpd_module_conf_item['type'] }})"
       notify:
-        - "run_apache_httpd_validate_configuration"
         - "run_apache_httpd_restart_apache_httpd"
 
     # Save the pre-role sysconfig once before the first edit; uninstall
@@ -583,7 +568,6 @@
       when:
         - (__run_apache_httpd_sysconfig_path | ansible.builtin.default('') | ansible.builtin.length) > 0
       notify:
-        - "run_apache_httpd_validate_configuration"
         - "run_apache_httpd_restart_apache_httpd"
 
     - name: "Config | Default | Clear sysconfig variables managed by httpd.conf (sysconfig type)"
@@ -611,7 +595,6 @@
         loop_var: "__run_apache_httpd_sysconfig_clear_item"
         label: "{{ __run_apache_httpd_sysconfig_clear_item['regexp'] }}"
       notify:
-        - "run_apache_httpd_validate_configuration"
         - "run_apache_httpd_restart_apache_httpd"
 
 - name: "Config | Default | Delete stale role-managed module configs (symlink type)"
@@ -680,5 +663,11 @@
         loop_var: "__run_apache_httpd_stale_module_conf_item"
         label: "{{ __run_apache_httpd_stale_module_conf_item['path'] }}"
       notify:
-        - "run_apache_httpd_validate_configuration"
         - "run_apache_httpd_restart_apache_httpd"
+
+- name: "Config | Default | Validate the complete configuration before service management"
+  ansible.builtin.include_tasks:
+    file: "{{ role_path }}/tasks/validate.yml"
+    apply:
+      tags:
+        - "run_apache_httpd_config"

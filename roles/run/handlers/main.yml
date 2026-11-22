@@ -5,34 +5,24 @@
 
 ---
 - name: "Handlers | Validate Apache HTTPD configuration"
-  ansible.builtin.command:
-    argv:
-      - "/bin/sh"
-      - "-c"
-      - "{{ __run_apache_httpd_config_test_cmd }}"
-  changed_when:
-    - false
-  failed_when:
-    - __run_apache_httpd_validation_result is ansible.builtin.failed
-  register: __run_apache_httpd_validation_result
+  ansible.builtin.include_tasks: "{{ role_path }}/tasks/validate.yml"
   listen:
     - "run_apache_httpd_validate_configuration"
-- name: "Handlers | Apache HTTPD service restart"
-  ansible.builtin.systemd_service:
-    name: "{{ __run_apache_httpd_apache_httpd_servicename }}"
-    state: "restarted"
-  when:
-    - run_apache_httpd_service_state in ['enabled', 'running']
+
+# Both topics can be notified in the same flush. Record the stronger request
+# before the shared handler runs; a restart also applies pending reloads.
+- name: "Handlers | Request a restart for this flush"
+  ansible.builtin.set_fact:
+    __run_apache_httpd_restart_pending: true
   listen:
     - "run_apache_httpd_restart_apache_httpd"
-- name: "Handlers | Apache HTTPD service reload"
-  ansible.builtin.systemd_service:
-    name: "{{ __run_apache_httpd_apache_httpd_servicename }}"
-    state: "reloaded"
-  when:
-    - run_apache_httpd_service_state in ['enabled', 'running']
+
+- name: "Handlers | Apply the requested Apache HTTPD configuration change"
+  ansible.builtin.include_tasks: "{{ role_path }}/tasks/apply.yml"
   listen:
+    - "run_apache_httpd_restart_apache_httpd"
     - "run_apache_httpd_reload_apache_httpd"
+
 - name: "Handlers | systemd daemon-reload"
   ansible.builtin.systemd_service:
     daemon_reload: true

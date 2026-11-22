@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: foundata GmbH <https://foundata.com>
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+---
+- name: "Apply | Consume the service action requested for this flush"
+  ansible.builtin.set_fact:
+    __run_apache_httpd_apply_state: "{{ 'restarted' if (__run_apache_httpd_restart_pending | ansible.builtin.default(false)) else 'reloaded' }}"
+    __run_apache_httpd_restart_pending: false
+
+- name: "Apply | Activate the configuration when the service should be running"
+  when:
+    - >-
+      __run_apache_httpd_may_activate | ansible.builtin.default(
+        run_apache_httpd_state == 'present' and run_apache_httpd_service_state in ['enabled', 'running'])
+  block:
+    - name: "Apply | Validate before reloading or restarting Apache HTTPD"
+      ansible.builtin.import_tasks: "validate.yml"
+
+    - name: "Apply | Reload or restart Apache HTTPD"
+      ansible.builtin.systemd_service:
+        name: "{{ __run_apache_httpd_apache_httpd_servicename }}"
+        state: "{{ __run_apache_httpd_apply_state }}"

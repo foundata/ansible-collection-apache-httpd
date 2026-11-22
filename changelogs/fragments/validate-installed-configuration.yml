@@ -1,0 +1,6 @@
+---
+bugfixes:
+  - >-
+    run - validate the installed Apache configuration before service management
+    on every configuration run, including retries after a failed configuration
+    test. Provision referenced certificates, keys and includes before the role runs.

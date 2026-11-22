@@ -104,6 +104,16 @@ Main features:
 
 ## Example playbooks, using this role<a id="examples"></a>
 
+Provision certificates, keys, and files referenced by your configuration before
+calling the role. Each configuration run checks the complete installed
+configuration before managing the service. If validation fails, correct the
+files on disk and rerun the role. Apache can continue serving the last
+configuration it loaded.
+
+Changes to virtual hosts, snippets, and DH parameters request a graceful reload.
+Main configuration and module changes request a restart. When both actions are
+pending, the role validates the configuration and restarts Apache once.
+
 Installation with automatic upgrade:
 
 ```yaml

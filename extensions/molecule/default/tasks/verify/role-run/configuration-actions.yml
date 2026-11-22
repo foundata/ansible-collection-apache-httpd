@@ -1,0 +1,216 @@
+# SPDX-FileCopyrightText: foundata GmbH <https://foundata.com>
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+---
+- name: "Molecule | Verify | Snapshot completed Apache starts and reloads"
+  ansible.builtin.command: &__testing_read_apache_actions
+    argv:
+      - "journalctl"
+      - "--boot"
+      - "--quiet"
+      - "--no-pager"
+      - "--unit={{ __run_apache_httpd_apache_httpd_servicename }}"
+      - "--output=json"
+      - "--output-fields=MESSAGE_ID"
+      - "MESSAGE_ID=39f53479d3a045ac8e11786248231fbf" # SD_MESSAGE_UNIT_STARTED
+      - "MESSAGE_ID=7b05ebc668384222baa8881179cfda54" # SD_MESSAGE_UNIT_RELOADED
+  changed_when:
+    - false
+  register: __testing_actions_before
+
+- name: "Molecule | Verify | Retain caller directives when changing the main configuration"
+  ansible.builtin.set_fact:
+    __testing_mixed_main_config: |
+      {{ __testing_state['run_apache_httpd_main_config_block'] | ansible.builtin.default('') }}
+      # Molecule service action test
+
+- name: "Molecule | Verify | Change the main configuration and HSTS snippet together"
+  ansible.builtin.include_role:
+    name: "foundata.apache_httpd.run"
+    tasks_from: "config/default"
+  vars:
+    run_apache_httpd_main_config_block: "{{ __testing_mixed_main_config }}"
+    run_apache_httpd_snippet_settings: >-
+      {{ __testing_state['run_apache_httpd_snippet_settings'] | ansible.builtin.default({})
+         | ansible.builtin.combine({'hsts': {'max_age': 86401}}, recursive=true) }}
+
+- name: "Molecule | Verify | Apply the mixed restart and reload requests"
+  ansible.builtin.meta: "flush_handlers"
+
+- name: "Molecule | Verify | Read systemd actions after the mixed changes"
+  ansible.builtin.command: *__testing_read_apache_actions
+  changed_when:
+    - false
+  register: __testing_actions_after_restart
+
+- name: "Molecule | Verify | Assert the mixed changes caused exactly one restart"
+  ansible.builtin.assert:
+    that:
+      - >-
+        (__testing_actions_after_restart['stdout_lines'] | ansible.builtin.length) ==
+        (__testing_actions_before['stdout_lines'] | ansible.builtin.length) + 1
+      - (__testing_actions_after_restart['stdout_lines'][-1] | ansible.builtin.from_json)['MESSAGE_ID'] == '39f53479d3a045ac8e11786248231fbf'
+
+- name: "Molecule | Verify | Set the HSTS policy for the next generation"
+  ansible.builtin.set_fact:
+    __testing_generation_settings: >-
+      {{ __testing_state['run_apache_httpd_snippet_settings'] | ansible.builtin.default({})
+         | ansible.builtin.combine({'hsts': {'max_age': 86402}}, recursive=true) }}
+
+- name: "Molecule | Verify | Change only the HSTS snippet"
+  ansible.builtin.include_role:
+    name: "foundata.apache_httpd.run"
+    tasks_from: "config/default"
+  vars: &__testing_active_config
+    run_apache_httpd_main_config_block: "{{ __testing_mixed_main_config }}"
+    run_apache_httpd_snippet_settings: "{{ __testing_generation_settings }}"
+
+- name: "Molecule | Verify | Create a private directory for transfer synchronization"
+  ansible.builtin.tempfile:
+    state: "directory"
+  register: __testing_transfer_barrier
+
+- name: "Molecule | Verify | Start downloading a response from the active Apache generation"
+  ansible.builtin.command:
+    argv:
+      - "python3"
+      - "-c"
+      - "{{ lookup('ansible.builtin.file', __testing_verify_taskdir ~ '/role-run/hold_response.py') }}"
+      - "{{ __testing_examplecom_wwwroot }}"
+      - "{{ __testing_transfer_barrier['path'] }}"
+  async: 180
+  poll: 0
+  changed_when:
+    - false
+  register: __testing_transfer_job
+
+- name: "Molecule | Verify | Wait until the old worker is serving the response"
+  ansible.builtin.wait_for:
+    path: "{{ __testing_transfer_barrier['path'] }}/ready"
+    timeout: 30
+
+- name: "Molecule | Verify | Activate the edited snippet during the transfer"
+  ansible.builtin.meta: "flush_handlers"
+
+- name: "Molecule | Verify | Wait for new workers to send the updated HSTS policy"
+  ansible.builtin.command: &__testing_request_https_headers
+    argv:
+      - "curl"
+      - "--noproxy"
+      - "*"
+      - "--fail"
+      - "--head"
+      - "--silent"
+      - "--insecure"
+      - "--max-time"
+      - "5"
+      - "--resolve"
+      - "example.com:443:127.0.0.1"
+      - "https://example.com/"
+  changed_when:
+    - false
+  until:
+    - __testing_new_generation['rc'] == 0
+    - "'max-age=86402;' in __testing_new_generation['stdout']"
+  retries: 10
+  delay: 1
+  register: __testing_new_generation
+
+- name: "Molecule | Verify | Allow the old worker's response to finish"
+  ansible.builtin.file:
+    path: "{{ __testing_transfer_barrier['path'] }}/resume"
+    state: "touch"
+    mode: "u=rw,g=,o=" # 0600
+
+- name: "Molecule | Verify | Require the entire response from the original worker"
+  ansible.builtin.async_status:
+    jid: "{{ __testing_transfer_job['ansible_job_id'] }}"
+  until:
+    - __testing_transfer_result is ansible.builtin.finished
+  retries: 30
+  delay: 1
+  register: __testing_transfer_result
+
+- name: "Molecule | Verify | Remove the private synchronization directory"
+  ansible.builtin.file:
+    path: "{{ __testing_transfer_barrier['path'] }}"
+    state: "absent"
+
+- name: "Molecule | Verify | Read systemd actions after the snippet update"
+  ansible.builtin.command: *__testing_read_apache_actions
+  changed_when:
+    - false
+  register: __testing_actions_after_reload
+
+- name: "Molecule | Verify | Assert a later handler flush performed only a reload"
+  ansible.builtin.assert:
+    that:
+      - >-
+        (__testing_actions_after_reload['stdout_lines'] | ansible.builtin.length) ==
+        (__testing_actions_after_restart['stdout_lines'] | ansible.builtin.length) + 1
+      - (__testing_actions_after_reload['stdout_lines'][-1] | ansible.builtin.from_json)['MESSAGE_ID'] == '7b05ebc668384222baa8881179cfda54'
+
+- name: "Molecule | Verify | Read original vhost directory permissions"
+  ansible.builtin.stat:
+    path: "{{ __run_apache_httpd_config_service_dropin_vhosts_available_dir_path }}"
+  register: __testing_directory_before_repair
+
+- name: "Molecule | Verify | Change permissions on the vhost configuration directory"
+  ansible.builtin.file:
+    path: "{{ __run_apache_httpd_config_service_dropin_vhosts_available_dir_path }}"
+    mode: "u=rwx,g=,o=" # 0700
+
+- name: "Molecule | Verify | Let the role repair the permissions"
+  ansible.builtin.include_role:
+    name: "foundata.apache_httpd.run"
+    tasks_from: "config/default"
+  vars: *__testing_active_config
+
+- name: "Molecule | Verify | Flush any notifications from the metadata repair"
+  ansible.builtin.meta: "flush_handlers"
+
+- name: "Molecule | Verify | Read the repaired vhost directory permissions"
+  ansible.builtin.stat:
+    path: "{{ __run_apache_httpd_config_service_dropin_vhosts_available_dir_path }}"
+  register: __testing_directory_after_repair
+
+- name: "Molecule | Verify | Read systemd actions after the metadata repair"
+  ansible.builtin.command: *__testing_read_apache_actions
+  changed_when:
+    - false
+  register: __testing_actions_after_repair
+
+- name: "Molecule | Verify | Assert metadata repair completed without a service action"
+  ansible.builtin.assert:
+    that:
+      - __testing_directory_before_repair['stat']['mode'] != '0700'
+      - __testing_directory_after_repair['stat']['mode'] == __testing_directory_before_repair['stat']['mode']
+      - (__testing_actions_after_repair['stdout_lines'] | ansible.builtin.length) == (__testing_actions_after_reload['stdout_lines'] | ansible.builtin.length)
+
+- name: "Molecule | Verify | Exercise a changed and an unchanged invalid configuration"
+  ansible.builtin.include_tasks:
+    file: "invalid-config.yml"
+  loop:
+    - 1
+    - 2
+  loop_control:
+    loop_var: "__testing_invalid_attempt"
+
+- name: "Molecule | Verify | Restore the valid configuration from converge"
+  ansible.builtin.include_role:
+    name: "foundata.apache_httpd.run"
+    tasks_from: "config/default"
+
+- name: "Molecule | Verify | Activate the restored configuration"
+  ansible.builtin.meta: "flush_handlers"
+
+- name: "Molecule | Verify | Confirm the corrected configuration serves the original policy"
+  ansible.builtin.command: *__testing_request_https_headers
+  changed_when:
+    - false
+  until:
+    - __testing_corrected_generation['rc'] == 0
+    - "'max-age=31536000;' in __testing_corrected_generation['stdout']"
+  retries: 10
+  delay: 1
+  register: __testing_corrected_generation

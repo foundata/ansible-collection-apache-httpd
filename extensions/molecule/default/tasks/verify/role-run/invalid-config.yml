@@ -1,0 +1,52 @@
+# SPDX-FileCopyrightText: foundata GmbH <https://foundata.com>
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+---
+- name: "Molecule | Verify | Reject the missing vhost include on attempt {{ __testing_invalid_attempt }}"
+  block:
+    - name: "Molecule | Verify | Converge with the missing include"
+      ansible.builtin.include_role:
+        name: "foundata.apache_httpd.run"
+        tasks_from: "{{ 'main' if __testing_invalid_attempt == 1 else 'config/default' }}"
+      vars:
+        run_apache_httpd_main_config_block: "{{ __testing_mixed_main_config }}"
+        run_apache_httpd_snippet_settings: "{{ __testing_generation_settings }}"
+        run_apache_httpd_vhosts_config: "{{ __testing_state['run_apache_httpd_vhosts_config'] + [__testing_invalid_vhost] }}"
+        __testing_invalid_vhost:
+          name: "molecule-invalid"
+          enabled: true
+          content: "Include molecule-missing.conf"
+
+    - name: "Molecule | Verify | Fail if Apache configuration validation was skipped"
+      ansible.builtin.fail:
+        msg: "The role accepted a missing include on attempt {{ __testing_invalid_attempt }}."
+
+  rescue:
+    - name: "Molecule | Verify | Check that Apache's configuration test failed on the missing include"
+      ansible.builtin.assert:
+        that:
+          - ansible_failed_result['rc'] | ansible.builtin.default(0) != 0
+          - "'molecule-missing.conf' in (ansible_failed_result['stderr'] ~ ansible_failed_result['stdout'])"
+
+- name: "Molecule | Verify | Confirm the last valid configuration still serves traffic"
+  ansible.builtin.command:
+    argv:
+      - "curl"
+      - "--noproxy"
+      - "*"
+      - "--fail"
+      - "--head"
+      - "--silent"
+      - "--insecure"
+      - "--max-time"
+      - "5"
+      - "--resolve"
+      - "example.com:443:127.0.0.1"
+      - "https://example.com/"
+  changed_when:
+    - false
+  failed_when:
+    - >-
+      __testing_last_valid_response['rc'] != 0 or
+      'max-age=86402;' not in __testing_last_valid_response['stdout']
+  register: __testing_last_valid_response

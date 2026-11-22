@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: foundata GmbH <https://foundata.com>
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+---
+- name: "Validate | Check the installed Apache HTTPD configuration"
+  ansible.builtin.command:
+    cmd: "{{ __run_apache_httpd_config_test_cmd }}"
+  when:
+    - not ansible_check_mode
+  changed_when:
+    - false
