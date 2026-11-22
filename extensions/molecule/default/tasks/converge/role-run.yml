@@ -11,6 +11,8 @@
     __testing_state_update:
       # set all role configuration variables
       run_apache_httpd_state: "present"
+      run_apache_httpd_main_config_block: |
+        LogFormat "{\"status\":%>s,\"duration_us\":%D,\"bytes\":%B}" ops
       run_apache_httpd_vhosts_config:
         - name: "example.com"
           enabled: true
@@ -18,6 +20,7 @@
             <VirtualHost *:80>
                 ServerName example.com
                 DocumentRoot {{ __testing_state['__testing_examplecom_wwwroot'] }}
+                CustomLog {{ __testing_state['__testing_examplecom_ops_log'] }} ops
 
                 Include snippets/vhost/headers-security.conf
 

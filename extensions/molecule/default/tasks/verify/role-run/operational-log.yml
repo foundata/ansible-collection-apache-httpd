@@ -1,0 +1,43 @@
+---
+# SPDX-FileCopyrightText: foundata GmbH <https://foundata.com>
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+- name: "Molecule | Verify | Record the operational log size before the request"
+  ansible.builtin.stat:
+    path: "{{ __testing_examplecom_ops_log }}"
+    get_checksum: false
+  register: __testing_ops_log_before
+
+- name: "Molecule | Verify | Request a static asset with a token in the URL and Referer"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1/test.css?token=molecule-private-marker"
+    headers:
+      Host: "example.com"
+      Referer: "https://example.com/molecule-private-marker"
+    use_proxy: false
+  register: __testing_ops_response
+
+- name: "Molecule | Verify | Read the operational log after Apache writes the response"
+  ansible.builtin.slurp:
+    src: "{{ __testing_examplecom_ops_log }}"
+  register: __testing_ops_log
+  until:
+    - (__testing_ops_log['content'] | ansible.builtin.b64decode | ansible.builtin.length) > __testing_ops_log_before['stat']['size']
+  retries: 5
+  delay: 1
+
+- name: "Molecule | Verify | Check the new JSON record contains only the three operational metrics"
+  ansible.builtin.assert:
+    that:
+      - "'molecule-private-marker' not in (__testing_ops_log['content'] | ansible.builtin.b64decode)"
+      - (__testing_ops_metrics.keys() | ansible.builtin.sort) == ['bytes', 'duration_us', 'status']
+      - __testing_ops_metrics['status'] == __testing_ops_response['status']
+      - __testing_ops_metrics['bytes'] == (__testing_ops_response['content_length'] | ansible.builtin.int)
+      - __testing_ops_metrics['duration_us'] is ansible.builtin.integer
+      - __testing_ops_metrics['duration_us'] >= 0
+  vars:
+    __testing_ops_metrics: >-
+      {{
+        (__testing_ops_log['content'] | ansible.builtin.b64decode)[__testing_ops_log_before['stat']['size']:]
+        | ansible.builtin.from_json
+      }}

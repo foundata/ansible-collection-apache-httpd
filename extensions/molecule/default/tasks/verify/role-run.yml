@@ -349,6 +349,10 @@
       and contains the expected content.
 
 
+- name: "Molecule | Verify | Check the per-vhost operational log"
+  ansible.builtin.include_tasks:
+    file: "role-run/operational-log.yml"
+
 ## Default catch-all VirtualHost (HTTP 403)
 
 - name: "Molecule | Verify | Connect to non-existing host on HTTP port 80"

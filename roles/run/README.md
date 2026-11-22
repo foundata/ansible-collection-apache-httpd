@@ -238,6 +238,33 @@ Installation with PHP-FPM (TCP backend) and custom main config directives:
               </VirtualHost>
 ```
 
+To log response status, request duration in microseconds, and response body
+size in bytes for one site, define a named JSON format in the main configuration
+and select it inside that virtual host. Each request writes one JSON object
+without client addresses, request URLs, or `Referer` values.
+
+```yaml
+run_apache_httpd_main_config_block: |
+  LogFormat "{\"status\":%>s,\"duration_us\":%D,\"bytes\":%B}" ops
+run_apache_httpd_vhosts_config:
+  - name: "shop.example.com"
+    enabled: true
+    content: |
+      <VirtualHost *:80>
+          ServerName shop.example.com
+          DocumentRoot /var/www/shop
+          CustomLog /var/log/apache2/shop-ops.log ops
+          <Directory /var/www/shop>
+              Require all granted
+          </Directory>
+      </VirtualHost>
+```
+
+The example uses the Debian log directory. Choose a path in the Apache log
+directory for your distribution and check whether the packaged logrotate rule
+covers it. If it does not, add a rule that recreates the file with the desired
+permissions and gracefully reloads Apache so it reopens the log.
+
 Uninstall:
 
 ```yaml

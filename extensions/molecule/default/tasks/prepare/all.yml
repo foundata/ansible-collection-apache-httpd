@@ -19,6 +19,7 @@
       __testing_examplecom_wwwroot: "/var/www/example.com"
       __testing_examplecom_cert: "/etc/pki/tls/private/example.com.pem"
       __testing_examplecom_key: "/etc/pki/tls/private/example.com.key"
+      __testing_examplecom_ops_log: "{{ '/var/log/httpd' if ansible_facts['os_family'] == 'RedHat' else '/var/log/apache2' }}/example-ops.log"
 
 - name: "Molecule | Prepare | Set __testing_* variables as facts from __testing_state"
   ansible.builtin.set_fact:
