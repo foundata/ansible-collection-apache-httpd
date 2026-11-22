@@ -4,6 +4,22 @@ foundata.apache\_httpd Ansible collection Release Notes
 
 .. contents:: Topics
 
+v1.5.0
+======
+
+Minor Changes
+-------------
+
+- Remove the previous handler topics ahead of the announced version 2.0.0: "run_apache_httpd: validate configuration", "run_apache_httpd: restart apache_httpd.service", "run_apache_httpd: reload apache_httpd.service" and "run_apache_httpd: systemd daemon-reload". Notify the role-prefixed topics instead. We decided that this is a non-breaking change: the topics are role internals, and their use by third parties is very unlikely.
+- The run role accepts ``ocsp_stapling`` in the ``tls-baseline`` snippet settings. Set it to false for certificates without an OCSP responder URL. Stapling remains enabled by default. The shared stapling cache persists across graceful reloads when the setting changes.
+- run - gracefully reload Apache for snippet and DH parameter changes and apply a single validated service action per handler flush. A restart takes precedence when both actions are requested.
+
+Bugfixes
+--------
+
+- run - avoid restarting Apache when correcting configuration directory permissions and restart it after installing or upgrading an enabled module package, including packages that enable the module themselves.
+- run - validate the installed Apache configuration before service management on every configuration run, including retries after a failed configuration test. Provision referenced certificates, keys and includes before the role runs.
+
 v1.4.0
 ======
 
