@@ -523,74 +523,70 @@
     file: "role-run/tls-stapling.yml"
 
 
-## Security response headers
+## Security and cache headers
 
-- name: "Molecule | Verify | Fetch HTTPS response headers from example.com"
+- name: "Molecule | Verify | Request successful and unsuccessful responses from the test vHosts"
   ansible.builtin.command:
     argv:
       - "curl"
-      - "--head"
       - "--silent"
+      - "--show-error"
       - "--insecure"
+      - "--head"
+      - "--noproxy"
+      - "*"
       - "--resolve"
-      - "example.com:443:127.0.0.1"
-      - "https://example.com/"
+      - "example.com:{{ item['port'] }}:127.0.0.1"
+      - "{{ item['url'] }}"
   changed_when:
     - false
-  register: __testing_https_headers
+  loop:
+    - url: "https://example.com/"
+      port: 443
+      status: 200
+    - url: "https://example.com/test.css"
+      port: 443
+      status: 200
+      immutable: true
+    - url: "https://example.com/missing.css"
+      port: 443
+      status: 404
+    - url: "https://example.com/molecule-error"
+      port: 443
+      status: 500
+    - url: "http://example.com/"
+      port: 80
+      status: 200
+  register: __testing_header_responses
 
-- name: "Molecule | Verify | Assert security response headers are present"
+- name: "Molecule | Verify | Check status, exact security headers and cache policy for each response"
   ansible.builtin.assert:
     that:
-      - __testing_https_headers['stdout'] is ansible.builtin.search('(?i)X-Content-Type-Options:\s*nosniff')
-      - __testing_https_headers['stdout'] is ansible.builtin.search('(?i)X-Frame-Options:\s*sameorigin')
-      - __testing_https_headers['stdout'] is ansible.builtin.search('(?i)Referrer-Policy:\s*strict-origin-when-cross-origin')
-    fail_msg: >-
-      One or more expected security headers are missing from the HTTPS response.
-      Response headers: {{ __testing_https_headers['stdout'] }}
-    success_msg: >-
-      All expected security headers (X-Content-Type-Options, X-Frame-Options,
-      Referrer-Policy) are present in the HTTPS response.
-
-
-## HSTS response header
-
-- name: "Molecule | Verify | Assert HSTS header is present in HTTPS response"
-  ansible.builtin.assert:
-    that:
-      - __testing_https_headers['stdout'] is ansible.builtin.search('(?i)Strict-Transport-Security:.*max-age=31536000.*includeSubDomains')
-    fail_msg: >-
-      The HSTS header is missing or has unexpected values in the HTTPS response.
-      Response headers: {{ __testing_https_headers['stdout'] }}
-    success_msg: >-
-      The HSTS header is present with expected values (max-age=31536000; includeSubDomains).
-
-
-## Cache-Control for static assets
-
-- name: "Molecule | Verify | Fetch HTTPS response headers for static asset"
-  ansible.builtin.command:
-    argv:
-      - "curl"
-      - "--head"
-      - "--silent"
-      - "--insecure"
-      - "--resolve"
-      - "example.com:443:127.0.0.1"
-      - "https://example.com/test.css"
-  changed_when:
-    - false
-  register: __testing_static_headers
-
-- name: "Molecule | Verify | Assert Cache-Control header is present for static assets"
-  ansible.builtin.assert:
-    that:
-      - __testing_static_headers['stdout'] is ansible.builtin.search('(?i)Cache-Control:.*public.*immutable')
-    fail_msg: >-
-      The Cache-Control header for static assets is missing or has unexpected values.
-      Response headers: {{ __testing_static_headers['stdout'] }}
-    success_msg: >-
-      The Cache-Control header for static assets contains 'public' and 'immutable'.
+      - (__testing_headers | ansible.builtin.first).split()[1] == (item['item']['status'] | ansible.builtin.string)
+      - >-
+        __testing_headers | ansible.builtin.select('ansible.builtin.match', '^x-content-type-options:') | ansible.builtin.list
+        == ['x-content-type-options: nosniff']
+      - >-
+        __testing_headers | ansible.builtin.select('ansible.builtin.match', '^x-frame-options:') | ansible.builtin.list
+        == ['x-frame-options: sameorigin']
+      - >-
+        __testing_headers | ansible.builtin.select('ansible.builtin.match', '^referrer-policy:') | ansible.builtin.list
+        == ['referrer-policy: strict-origin-when-cross-origin']
+      - >-
+        __testing_headers | ansible.builtin.select('ansible.builtin.match', '^strict-transport-security:') | ansible.builtin.list
+        == (['strict-transport-security: max-age=31536000; includesubdomains'] if item['item']['port'] == 443 else [])
+      - >-
+        (__testing_immutable_headers | ansible.builtin.length > 0)
+        == (item['item']['immutable'] | ansible.builtin.default(false))
+      - __testing_immutable_headers | ansible.builtin.reject('ansible.builtin.search', 'public') | ansible.builtin.list == []
+    fail_msg: "Unexpected response to {{ item['item']['url'] }}: {{ item['stdout_lines'] }}"
+  vars:
+    __testing_headers: "{{ item['stdout_lines'] | ansible.builtin.map('ansible.builtin.lower') | ansible.builtin.list }}"
+    __testing_immutable_headers: >-
+      {{ __testing_headers | ansible.builtin.select('ansible.builtin.match', '^cache-control:.*immutable') | ansible.builtin.list }}
+  loop: "{{ __testing_header_responses['results'] }}"
+  loop_control:
+    label: "{{ item['item']['url'] }}"
 
 
 - name: "Molecule | Verify | Check validation and service activation"

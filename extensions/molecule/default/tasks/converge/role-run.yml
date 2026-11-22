@@ -19,6 +19,8 @@
                 ServerName example.com
                 DocumentRoot {{ __testing_state['__testing_examplecom_wwwroot'] }}
 
+                Include snippets/vhost/headers-security.conf
+
                 <Directory {{ __testing_state['__testing_examplecom_wwwroot'] }}>
                     Options -Indexes +FollowSymLinks
                     AllowOverride None
@@ -37,6 +39,9 @@
                 SSLEngine on
                 SSLCertificateFile {{ __testing_state['__testing_examplecom_cert'] }}
                 SSLCertificateKeyFile {{ __testing_state['__testing_examplecom_key'] }}
+
+                RewriteEngine on
+                RewriteRule ^/molecule-error$ - [R=500,L]
 
                 # Include snippets for testing
                 Include snippets/vhost/headers-security.conf
