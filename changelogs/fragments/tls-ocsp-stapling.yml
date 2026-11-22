@@ -3,4 +3,5 @@ minor_changes:
   - >-
     The run role accepts ``ocsp_stapling`` in the ``tls-baseline`` snippet
     settings. Set it to false for certificates without an OCSP responder URL.
-    Stapling remains enabled by default.
+    Stapling remains enabled by default. The shared stapling cache persists
+    across graceful reloads when the setting changes.

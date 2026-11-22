@@ -455,7 +455,9 @@ argument_specs:
               ocsp_stapling:
                 description: |
                   Enable OCSP stapling in the TLS baseline. Set to `false` if
-                  your certificates have no OCSP responder URL.
+                  your certificates have no OCSP responder URL. Apache keeps the
+                  shared stapling cache allocated so that toggling this setting
+                  can take effect with a graceful reload.
                 type: "bool"
                 default: true
               resolvers:

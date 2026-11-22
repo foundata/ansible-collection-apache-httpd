@@ -113,7 +113,10 @@ configuration it loaded.
 
 Changes to virtual hosts, snippets, and DH parameters request a graceful reload.
 Main configuration and module changes request a restart. When both actions are
-pending, the role validates the configuration and restarts Apache once.
+pending, the role validates the configuration and restarts Apache once. Add or
+remove the global TLS baseline through the main configuration block so Apache
+restarts when its shared TLS caches change. For caller-managed includes, notify
+the corresponding reload or restart handler when their contents change.
 
 Installation with automatic upgrade:
 
@@ -941,7 +944,9 @@ back to a classical-only list via version-specific vars files.
 [*⇑ Back to ToC ⇑*](#toc)
 
 Enable OCSP stapling in the TLS baseline. Set to `false` if
-your certificates have no OCSP responder URL.
+your certificates have no OCSP responder URL. Apache keeps the
+shared stapling cache allocated so that toggling this setting
+can take effect with a graceful reload.
 
 - **Type**: `bool`
 - **Required**: No

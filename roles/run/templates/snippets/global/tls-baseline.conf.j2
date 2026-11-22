@@ -105,11 +105,12 @@ SSLSessionCacheTimeout {{ settings['ssl_session_timeout'] }}
 # - https://ssl-config.mozilla.org/
 # - https://wiki.mozilla.org/Security/Server_Side_TLS#OCSP_Stapling
 # - https://raymii.org/s/tutorials/OCSP_Stapling_on_nginx.html
+# Keep the shared cache across graceful reloads when stapling is toggled.
+SSLStaplingCache shmcb:/run/httpd/ssl_stapling(32768)
 {% if settings['ocsp_stapling'] | ansible.builtin.bool %}
 SSLUseStapling on
 SSLStaplingResponderTimeout 5
 SSLStaplingReturnResponderErrors off
-SSLStaplingCache shmcb:/run/httpd/ssl_stapling(32768)
 {% else %}
 SSLUseStapling off
 {% endif %}
